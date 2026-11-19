@@ -1,5 +1,6 @@
 import { course } from './course.mjs';
 import { tutorials } from './walkthroughs.mjs';
+import { references } from './references.mjs';
 
 const $ = id => document.getElementById(id);
 const source = $('source');
@@ -74,6 +75,22 @@ for (const item of course.lessons) {
 }
 picker.onchange = () => { location.hash = picker.value; };
 
+function showReferences(id) {
+  $('lesson-references').open = false;
+  $('reference-list').replaceChildren(...references[id].map(({ title, url, note }) => {
+    const item = document.createElement('li');
+    const link = document.createElement('a');
+    link.href = url;
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+    link.textContent = title;
+    const detail = document.createElement('p');
+    detail.textContent = note;
+    item.append(link, detail);
+    return item;
+  }));
+}
+
 function showLesson(index) {
   lesson = course.lessons[index];
   const tutorial = tutorials[lesson.id];
@@ -101,9 +118,7 @@ function showLesson(index) {
     task:'task', hint:'hint', explanation:'explanation',
     transfer:'transfer'
   })) $(id).textContent = lesson[field] ?? course[field];
-  const reference = $('reference');
-  reference.href = lesson.reference[1];
-  reference.textContent = lesson.reference[0];
+  showReferences(lesson.id);
   picker.value = lesson.id;
   $('next-lesson').replaceChildren();
   for (const [other, label] of [[course.lessons[index - 1], 'Previous'], [course.lessons[index + 1], 'Next']]) {

@@ -41,6 +41,7 @@ await writeFile(new URL('walkthroughs.mjs', dist), 'export const tutorials = ' +
 await cp(at('../src/style.css'), new URL('style.css', dist));
 await cp(at('../src/lab.mjs'), new URL('lab.mjs', dist));
 await cp(at('../content/course.mjs'), new URL('course.mjs', dist));
+await cp(at('../content/references.mjs'), new URL('references.mjs', dist));
 await cp(at('../runtime/files/'), new URL('runtime/', dist), { recursive: true });
 await cp(at('../examples/'), new URL('examples/', dist), { recursive: true });
 await cp(at('../assets/fonts/'), new URL('fonts/', dist), { recursive: true });

@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFile, stat } from 'node:fs/promises';
 import { course } from '../content/course.mjs';
+import { references } from '../dist/references.mjs';
 
 const dist = new URL('../dist/', import.meta.url);
 const content = await readFile(new URL('offline.js', dist), 'utf8');
@@ -14,7 +15,7 @@ for (const name of guest.parts) {
   assert(offlinePaths.has('runtime/' + name), name + ' must be saved offline');
 }
 assert.equal(bytes, guest.bytes);
-for (const path of ['index.html', 'style.css', 'lab.mjs', 'course.mjs', 'walkthroughs.mjs', 'runtime/libv86.mjs',
+for (const path of ['index.html', 'style.css', 'lab.mjs', 'course.mjs', 'walkthroughs.mjs', 'references.mjs', 'runtime/libv86.mjs',
   'runtime/v86.wasm', 'runtime/vmlinuz-virt', 'runtime/parts.json',
   'runtime/seabios.bin', 'runtime/vgabios.bin', 'fonts/plex-sans.woff2', 'fonts/plex-mono-400.woff2'])
   assert(offlinePaths.has(path), path + ' must be saved offline');
@@ -31,8 +32,19 @@ const ids = new Set();
 for (const lesson of course.lessons) {
   assert(!ids.has(lesson.id), 'duplicate lesson ID');
   ids.add(lesson.id);
+  const entries = references[lesson.id];
+  assert(Array.isArray(entries) && entries.length >= 2, lesson.id + ': expected API references');
+  const urls = new Set();
+  for (const { title, url, note } of entries) {
+    assert(typeof title === 'string' && title.trim(), lesson.id + ': reference title');
+    assert(typeof note === 'string' && note.trim(), lesson.id + ': offline reference note');
+    assert.equal(new URL(url).protocol, 'https:', lesson.id + ': reference URL');
+    assert(!urls.has(url), lesson.id + ': duplicate reference link: ' + url);
+    urls.add(url);
+  }
   for (const key of ['section', 'title', 'intro', 'question', 'task', 'hint', 'explanation', 'transfer', 'command'])
     assert(typeof lesson[key] === 'string' && lesson[key].trim(), lesson.id + ': ' + key);
   assert(lesson.command.startsWith('strace '), 'starter command invokes strace');
 }
+assert.equal(Object.keys(references).length, ids.size, 'one reference list per lesson');
 console.log(`Checked ${ids.size} lessons and ${offlinePaths.size} offline assets`);

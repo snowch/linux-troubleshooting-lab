@@ -18,10 +18,6 @@ export const course = {
       "hint": "Look for an openat() call involving conf near the end of the trace. Earlier calls belong to program startup.",
       "explanation": "The failing run opens conf/setting and gets ENOENT. The repaired run opens conf/settings and gets a nonnegative descriptor.",
       "transfer": "How would you include read() and close() in the trace to follow that descriptor?",
-      "reference": [
-        "Read the strace manual",
-        "https://man7.org/linux/man-pages/man1/strace.1.html"
-      ]
     },
     {
       "id": "working-directory",
@@ -34,10 +30,6 @@ export const course = {
       "hint": "The relative filename does not change. Look for the preceding call that changes the directory.",
       "explanation": "The failing process changes into work and tries work/conf/settings. The repaired process stays in the exercise directory and opens conf/settings.",
       "transfer": "What would change if the program used an absolute path or passed an explicit directory descriptor to openat()?",
-      "reference": [
-        "Read the strace manual",
-        "https://man7.org/linux/man-pages/man1/strace.1.html"
-      ]
     },
     {
       "id": "permissions",
@@ -50,10 +42,6 @@ export const course = {
       "hint": "The file conf/private exists. The service user can open conf/public.",
       "explanation": "The request for conf/private gets EACCES. The repaired fixture opens a file readable by the service user. The two errors EACCES and ENOENT require different diagnoses.",
       "transfer": "What additional evidence would help if EACCES came from a parent directory?",
-      "reference": [
-        "Read the strace manual",
-        "https://man7.org/linux/man-pages/man1/strace.1.html"
-      ]
     },
     {
       "id": "children",
@@ -66,10 +54,6 @@ export const course = {
       "hint": "The first trace can show the wait status but lacks the child’s syscall history.",
       "explanation": "The child tries ./missing-helper and gets ENOENT. It exits with status 127. With -f, the trace shows both facts. The repaired child successfully execs /bin/echo.",
       "transfer": "What flag would you use with -f and -o to save a separate file for each traced process?",
-      "reference": [
-        "Read the strace manual",
-        "https://man7.org/linux/man-pages/man1/strace.1.html"
-      ]
     },
     {
       "id": "pipeline",
@@ -82,10 +66,6 @@ export const course = {
       "hint": "In the failing case the shell redirects printf to standard error. That destination is separate from the pipeline’s input.",
       "explanation": "The failing run sends ping to the terminal and wc reads an empty stream. The repaired run writes ping into the pipe and wc counts four bytes.",
       "transfer": "How would you use -e trace=read to find the corresponding read() without collecting unrelated system calls?",
-      "reference": [
-        "Read the strace manual",
-        "https://man7.org/linux/man-pages/man1/strace.1.html"
-      ]
     },
     {
       "id": "pipe-eof",
@@ -98,10 +78,6 @@ export const course = {
       "hint": "The fixture uses a second pipe to keep the child alive during the wait. Identify the pipe the parent passes to poll().",
       "explanation": "The parent closes its copy of the main pipe writer. The failing child retains its inherited copy, so poll() times out. Closing it in the repaired run produces POLLHUP and read() returns zero.",
       "transfer": "Why would FD_CLOEXEC help if the child called exec, and why would it leave the fork-only case unchanged?",
-      "reference": [
-        "Read the strace manual",
-        "https://man7.org/linux/man-pages/man1/strace.1.html"
-      ]
     },
     {
       "id": "refused",
@@ -114,10 +90,6 @@ export const course = {
       "hint": "The failing endpoint reserves a local port without listening on it. The repaired endpoint calls listen().",
       "explanation": "The unsuccessful connection reports ECONNREFUSED, either immediately or through SO_ERROR after poll(). The repaired run reports SO_ERROR zero.",
       "transfer": "If the program saw neither a completion event nor a socket error, what evidence would show its own connect deadline had expired?",
-      "reference": [
-        "Read the strace manual",
-        "https://man7.org/linux/man-pages/man1/strace.1.html"
-      ]
     },
     {
       "id": "deadline",
@@ -130,10 +102,6 @@ export const course = {
       "hint": "Connect completion uses POLLOUT. The later wait asks for POLLIN and has its own deadline.",
       "explanation": "SO_ERROR is zero in both runs. The failing POLLIN wait returns zero after its deadline. The repaired server writes a byte and the client receives it. The times are measurements of this guest run.",
       "transfer": "What additional data would you collect to diagnose a slow service outside this isolated guest?",
-      "reference": [
-        "Read the strace manual",
-        "https://man7.org/linux/man-pages/man1/strace.1.html"
-      ]
     },
     {
       "id": "capstone",
@@ -146,10 +114,6 @@ export const course = {
       "hint": "Compare the calls leading up to the failure. An unrelated startup lookup may also return ENOENT before the application begins.",
       "explanation": "The CLI changes into work and cannot open conf/settings from there. It never gets as far as launching the helper. The repaired run opens configuration from the correct working directory and its child execs /bin/echo.",
       "transfer": "How would you change this CLI’s error reporting so a user could reach the same diagnosis without strace?",
-      "reference": [
-        "Read the strace manual",
-        "https://man7.org/linux/man-pages/man1/strace.1.html"
-      ]
     }
   ],
   "assets": [
