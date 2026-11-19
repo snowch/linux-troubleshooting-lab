@@ -14,7 +14,7 @@ for (const name of guest.parts) {
   assert(offlinePaths.has('runtime/' + name), name + ' must be saved offline');
 }
 assert.equal(bytes, guest.bytes);
-for (const path of ['index.html', 'style.css', 'lab.mjs', 'course.mjs', 'runtime/libv86.mjs',
+for (const path of ['index.html', 'style.css', 'lab.mjs', 'course.mjs', 'walkthroughs.mjs', 'runtime/libv86.mjs',
   'runtime/v86.wasm', 'runtime/vmlinuz-virt', 'runtime/parts.json',
   'runtime/seabios.bin', 'runtime/vgabios.bin', 'fonts/plex-sans.woff2', 'fonts/plex-mono-400.woff2'])
   assert(offlinePaths.has(path), path + ' must be saved offline');

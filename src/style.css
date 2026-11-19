@@ -1,15 +1,15 @@
 @font-face{font-family:Plex;src:url("./fonts/plex-sans.woff2") format("woff2");font-weight:100 700;font-display:swap}
 @font-face{font-family:PlexMono;src:url("./fonts/plex-mono-400.woff2") format("woff2");font-display:swap}
-:root{color-scheme:light;--bg:#f5f9f7;--paper:#fff;--ink:#193237;--muted:#4c6366;--line:#cadbd7;--soft:#e9f2ef;--accent:#12614e;--on-accent:#fff;--code:#122824;--code-ink:#e1eee6}
-:root[data-theme=dark]{color-scheme:dark;--bg:#142326;--paper:#1c2f32;--ink:#e4efeb;--muted:#acc1bb;--line:#465e5e;--soft:#263d3e;--accent:#a3ddc2;--on-accent:#142326;--code:#0c1a1a}
+:root{color-scheme:light;--bg:#f5f9f7;--paper:#fff;--ink:#193237;--muted:#4c6366;--line:#cadbd7;--soft:#e9f2ef;--accent:#12614e;--on-accent:#fff;--code:#122824;--code-ink:#e1eee6;--excerpt-bg:#e9f0f8;--excerpt-ink:#245b91}
+:root[data-theme=dark]{color-scheme:dark;--bg:#142326;--paper:#1c2f32;--ink:#e4efeb;--muted:#acc1bb;--line:#465e5e;--soft:#263d3e;--accent:#a3ddc2;--on-accent:#142326;--code:#0c1a1a;--excerpt-bg:#20354c;--excerpt-ink:#b2d3ff}
 *{box-sizing:border-box}
-body{margin:0;color:var(--ink);background:var(--bg);font:1.0625rem/1.62 Plex,system-ui,sans-serif}
+body{margin:0;color:var(--ink);background:var(--bg);font:1.0625rem/1.7 Plex,system-ui,sans-serif}
 a{color:var(--accent);text-underline-offset:.16em}
 :focus-visible{outline:3px solid var(--accent);outline-offset:3px}
 .skip-link{position:absolute;left:1rem;transform:translateY(-150%);background:var(--paper);padding:.4rem;z-index:2}
 .skip-link:focus{transform:translateY(0)}
 header{border-bottom:1px solid var(--line);background:var(--paper)}
-.header-inner{max-width:88rem;margin:auto;padding:.82rem clamp(1rem,4vw,3rem);display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap}
+.header-inner{max-width:1120px;margin:auto;padding:.82rem clamp(16px,4vw,44px);display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap}
 .brand{font-size:1.15rem;font-weight:700;text-decoration:none}
 .actions,.toolbar{display:flex;align-items:center;flex-wrap:wrap;gap:.45rem .65rem}
 button,select,input{font:inherit}
@@ -17,7 +17,7 @@ button,select{min-height:42px;padding:.34rem .68rem;border:1px solid var(--line)
 button:hover:enabled{border-color:var(--accent)}
 button:disabled{opacity:.5;cursor:default}
 .primary{background:var(--accent);border-color:var(--accent);color:var(--on-accent);font-weight:600}
-.layout{max-width:88rem;margin:0 auto;padding:clamp(1.5rem,4vw,3.25rem) clamp(1rem,4vw,3rem)}
+.layout{width:min(100%,1120px);margin:0 auto;padding:clamp(24px,5vw,64px) clamp(16px,4vw,44px)}
 .lesson-picker{display:flex;align-items:center;flex-wrap:wrap;gap:.4rem .65rem;margin-bottom:1.25rem}
 .lesson-picker label{font-weight:600}
 .lesson-picker select{width:min(100%,32rem);min-width:0;text-overflow:ellipsis}
@@ -26,16 +26,16 @@ summary{cursor:pointer;padding:.45rem 0;width:fit-content}
 nav a{display:block;padding:.48rem .65rem;border-radius:.36rem;text-decoration:none}
 nav a:hover{background:var(--soft)}
 .section-label{margin:0;color:var(--accent);font-weight:600}
-h1{font-size:clamp(2rem,5vw,3.65rem);line-height:1.08;letter-spacing:-.045em;margin:.36rem 0 .8rem}
-h2{font-size:clamp(1.3rem,3vw,1.65rem);line-height:1.2;margin:1.85rem 0 .55rem}
+h1{font-size:clamp(38px,4.6vw,64px);line-height:1.08;letter-spacing:-2.4px;font-weight:600;margin:8px 0 16px;overflow-wrap:anywhere}
+h2{font-size:clamp(27px,3vw,34px);line-height:1.2;margin:32px 0 12px}
 p{margin:.65rem 0 1rem}
-.lede{font-size:1.12rem;color:var(--muted);max-width:65ch}
+.lede{font-size:19px;line-height:1.65;color:var(--muted);max-width:66ch}
 .question{border-left:3px solid var(--accent);background:var(--soft);padding:.7rem .9rem}
 .workspace{background:var(--paper);border:1px solid var(--line);border-radius:.55rem;overflow:hidden}
 .toolbar,#shell{padding:.55rem .7rem}
 .toolbar label,#shell label{font-weight:600}
-textarea,pre,#command{font: .93rem/1.55 PlexMono,monospace}
-textarea,pre{background:var(--code);color:var(--code-ink);margin:0;padding:.85rem;display:block;width:100%;border:0;tab-size:4}
+textarea,pre,#command{font:16px/1.5 PlexMono,monospace}
+textarea,pre{background:var(--code);color:var(--code-ink);margin:0;padding:16px;display:block;width:100%;border:0;tab-size:4}
 textarea{resize:vertical;min-height:6rem}
 #source{white-space:pre}
 #evidence{background:var(--paper);color:var(--ink);border:1px solid var(--line);border-radius:.4rem;margin:.35rem 0 .9rem}
@@ -44,9 +44,9 @@ pre{min-height:8rem;max-height:21rem;overflow:auto;white-space:pre-wrap;overflow
 #shell{display:flex;gap:.6rem;align-items:center;flex-wrap:wrap}
 #command{flex:1;min-width:12rem;padding:.55rem;border:1px solid var(--line);border-radius:.35rem}
 #runtime-status{font-size:.9rem;color:var(--muted)}
-.offline-status{max-width:88rem;margin:.65rem auto 0;padding:0 clamp(1rem,4vw,3rem)}
-#next-lesson{display:flex;justify-content:space-between;border-top:1px solid var(--line);margin-top:2rem;padding-top:.65rem;gap:1rem}
-footer{border-top:1px solid var(--line);padding:1rem clamp(1rem,4vw,3rem);color:var(--muted);font-size:.93rem}
+.offline-status{max-width:1120px;margin:.65rem auto 0;padding:0 clamp(16px,4vw,44px)}
+#next-lesson{display:flex;justify-content:space-between;border-top:1px solid var(--line);margin-top:2rem;padding-top:.65rem;gap:1rem;flex-wrap:wrap}
+footer{border-top:1px solid var(--line);padding:1rem clamp(16px,4vw,44px);color:var(--muted);font-size:.93rem}
 @media(max-width:46rem){.header-inner{align-items:flex-start}#command{min-width:9rem}}
 
 
@@ -66,3 +66,42 @@ footer{border-top:1px solid var(--line);padding:1rem clamp(1rem,4vw,3rem);color:
 .course-outline ul{list-style:none;padding:0;margin:0}
 .course-outline a{padding:.35rem .55rem;overflow-wrap:anywhere}
 @media(max-width:52rem){.course-hero,.course-setup{grid-template-columns:minmax(0,1fr)}.course-cover{max-width:42rem}.course-setup{gap:0}}
+
+#lesson-title{max-width:19ch}
+#workbench .question,.read-result,.lesson-task{
+  border-left:3px solid var(--accent);
+  border-radius:0 8px 8px 0;
+  background:var(--soft);
+  padding:16px 20px;
+}
+#workbench>.question,.read-result,.lesson-task{max-width:none;margin:24px 0}
+.walkthrough{display:grid;grid-template-columns:minmax(0,1fr);gap:24px;padding:0;list-style-position:inside;margin:16px 0 24px}
+.walkthrough li{min-width:0}
+.walkthrough li::marker{font-weight:600;color:var(--accent)}
+.walkthrough h3{display:inline;font-size:1.2rem;line-height:1.25}
+.walkthrough p{margin:6px 0 12px}
+.walkthrough figure{margin:0}
+.walkthrough figcaption{color:var(--excerpt-ink);font:14px/1.5 PlexMono,monospace;margin:0 0 5px}
+.walkthrough pre{
+  min-height:0;
+  max-height:none;
+  border-left:4px solid var(--excerpt-ink);
+  border-radius:0 8px 8px 0;
+  background:var(--excerpt-bg);
+  color:var(--excerpt-ink);
+  white-space:pre;
+  overflow-wrap:normal;
+  padding:18px 20px;
+}
+.walkthrough code{font:inherit}
+.walkthrough pre:focus-visible{outline-offset:-3px}
+.program-tools{border-bottom:1px solid var(--line)}
+.program-tools>summary{padding:12px 16px;font-weight:600}
+.program-tools:last-child{border:0}
+#program #source:focus-visible{outline-offset:-3px}
+#draft-notice{font-size:.95rem;color:var(--muted)}
+.lesson-task h2{margin:0 0 12px}
+#workbench .lesson-task .question{border:0;padding:0;margin:12px 0}
+@media(max-width:760px){.walkthrough pre{padding-inline:16px}}
+@media(max-width:720px){.layout{padding-top:24px}}
+@media(max-width:440px){h1{font-size:2.4rem;letter-spacing:-.055em}}

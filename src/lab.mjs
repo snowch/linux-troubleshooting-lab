@@ -1,4 +1,5 @@
 import { course } from './course.mjs';
+import { tutorials } from './walkthroughs.mjs';
 
 const $ = id => document.getElementById(id);
 const source = $('source');
@@ -37,13 +38,28 @@ $('theme').onclick = () => {
 
 function draftKey(field) { return lesson.id + '/' + field; }
 
-source.oninput = () => save(draftKey('command'), source.value);
+function showDraftNotice() {
+  $('draft-notice').hidden = source.value === lesson.command;
+}
+source.oninput = () => {
+  save(draftKey('command'), source.value);
+  showDraftNotice();
+};
+$('edit-step').onclick = () => {
+  if (tutorials[lesson.id].edit === 'variant') {
+    variant.focus();
+    return;
+  }
+  $('program').open = true;
+  source.focus();
+};
 evidence.oninput = () => save(draftKey('evidence'), evidence.value);
 variant.onchange = () => save(draftKey('variant'), variant.value);
 $('restore').onclick = () => {
   if (source.value !== lesson.command && !confirm('Restore the starter trace command?')) return;
   remove(draftKey('command'));
   source.value = lesson.command;
+  showDraftNotice();
 };
 
 const picker = $('lesson-picker');
@@ -60,10 +76,29 @@ picker.onchange = () => { location.hash = picker.value; };
 
 function showLesson(index) {
   lesson = course.lessons[index];
+  const tutorial = tutorials[lesson.id];
+  $('program').open = false;
+  $('draft-notice').hidden = true;
+  $('intro').textContent = tutorial.goal;
+  $('read-result').textContent = tutorial.look;
+  $('walkthrough').replaceChildren(...tutorial.steps.map(step => {
+    const item = document.createElement('li');
+    const title = document.createElement('h3');
+    const description = document.createElement('p');
+    const sample = document.createElement('pre');
+    sample.tabIndex = 0;
+    const code = document.createElement('code');
+    title.textContent = step.heading;
+    description.textContent = step.text;
+    code.textContent = step.code;
+    sample.append(code);
+    item.append(title, description, sample);
+    return item;
+  }));
   document.title = lesson.title + ' · ' + course.title;
   for (const [id, field] of Object.entries({
-    'lesson-title':'title', section:'section', intro:'intro', question:'question',
-    instructions:'instructions', task:'task', hint:'hint', explanation:'explanation',
+    'lesson-title':'title', section:'section', question:'question',
+    task:'task', hint:'hint', explanation:'explanation',
     transfer:'transfer'
   })) $(id).textContent = lesson[field] ?? course[field];
   const reference = $('reference');
@@ -78,7 +113,9 @@ function showLesson(index) {
     link.textContent = label + ' · ' + other.title;
     $('next-lesson').append(link);
   }
+  $('edit-step').textContent = tutorial.edit === 'variant' ? 'Show the case control' : 'Show me where to edit';
   source.value = read(draftKey('command')) ?? lesson.command;
+  showDraftNotice();
   source.scrollTop = 0;
   source.scrollLeft = 0;
   evidence.value = read(draftKey('evidence')) ?? '';
@@ -143,7 +180,8 @@ function receive(byte) {
         return;
       }
     }
-    terminalText = (terminalText + completed + '\n').slice(-32000);
+    if (!(resultMarker && completed.includes(resultMarker) && completed.includes('sh /exchange/run-')))
+      terminalText = (terminalText + completed + '\n').slice(-32000);
     line = '';
   } else if (byte === 8) {
     line = line.slice(0, -1);

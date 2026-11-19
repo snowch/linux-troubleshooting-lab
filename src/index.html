@@ -56,9 +56,12 @@
       <h1 id="lesson-title" tabindex="-1">{{title}}</h1>
       <p class="lede" id="intro"></p>
       <p id="question" class="question"></p>
+      <section aria-labelledby="walkthrough-heading">
+        <h2 id="walkthrough-heading">Read the trace command</h2>
+        <ol id="walkthrough" class="walkthrough"></ol>
+      </section>
       <section aria-labelledby="workbench-heading">
-        <h2 id="workbench-heading">Run the experiment</h2>
-        <p id="instructions"></p>
+        <h2 id="workbench-heading">Run it in Linux</h2>
         <div class="workspace">
           <div class="toolbar">
             <label for="variant">Case</label>
@@ -66,10 +69,15 @@
               <option value="broken">Failing</option>
               <option value="fixed">Repaired</option>
             </select>
-            <label for="source">Trace command</label>
-            <button type="button" id="restore">Restore command</button>
           </div>
-          <textarea id="source" spellcheck="false" autocapitalize="off" autocomplete="off" rows="4"></textarea>
+          <details id="program" class="program-tools">
+            <summary>Edit the trace command</summary>
+            <div class="toolbar">
+              <label for="source">Trace command</label>
+              <button type="button" id="restore">Restore command</button>
+            </div>
+            <textarea id="source" spellcheck="false" autocapitalize="off" autocomplete="off" rows="4"></textarea>
+          </details>
           <div class="toolbar controls">
             <button type="button" id="run" class="primary">Run in Linux</button>
             <button type="button" id="stop" disabled>Interrupt</button>
@@ -77,16 +85,22 @@
             <span id="runtime-status" role="status">Linux is off</span>
           </div>
           <pre id="terminal" aria-label="Linux console output" tabindex="0">Run in Linux to see the program output and trace.</pre>
-          <form id="shell">
-            <label for="command">Linux shell</label>
-            <input id="command" type="text" spellcheck="false" autocomplete="off" autocapitalize="off" disabled placeholder="Enter a command after Linux boots">
-            <button type="submit" disabled>Send</button>
-          </form>
+          <details class="program-tools">
+            <summary>Open Linux shell</summary>
+            <form id="shell">
+              <label for="command">Shell command</label>
+              <input id="command" type="text" spellcheck="false" autocomplete="off" autocapitalize="off" disabled placeholder="Enter a command after Linux boots">
+              <button type="submit" disabled>Send</button>
+            </form>
+          </details>
         </div>
+        <p id="draft-notice" hidden>Your saved trace command will run. Choose Restore command to repeat the original example.</p>
+        <p class="read-result"><strong>Read the result.</strong> <span id="read-result"></span></p>
       </section>
-      <section aria-labelledby="change-heading">
+      <section class="lesson-task" aria-labelledby="change-heading">
         <h2 id="change-heading">Compare the evidence</h2>
         <p id="task"></p>
+        <button type="button" id="edit-step"></button>
         <label for="evidence">Evidence and diagnosis</label>
         <textarea id="evidence" rows="4" spellcheck="false"></textarea>
         <details><summary>Hint</summary><p id="hint"></p></details>
