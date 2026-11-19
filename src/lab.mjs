@@ -12,7 +12,7 @@ let decoder = new TextDecoder();
 const serialByte = new Uint8Array(1);
 const key = 'linux-lab:' + course.slug + ':';
 let lesson;
-let vm, boot, running = false, line = '', terminalText = '';
+let vm, boot, bootController, running = false, line = '', terminalText = '';
 let runNumber = 0, resultMarker = '';
 
 function read(keyName) {
@@ -154,30 +154,64 @@ function receive(byte) {
   paint();
 }
 
-async function initrd() {
-  const response = await fetch('./runtime/parts.json');
+async function initrd(signal) {
+  const response = await fetch('./runtime/parts.json', { signal });
   if (!response.ok) throw Error('Could not open the Linux guest manifest');
   const { parts, bytes } = await response.json();
   const image = new Uint8Array(bytes);
-  let offset = 0;
-  for (const name of parts) {
-    const part = await fetch('./runtime/' + name);
+  // The image builder writes fixed 16 MiB parts, with a shorter final part.
+  // Stream into the final buffer so overlapping requests do not duplicate the image.
+  const partSize = 16 * 1024 * 1024;
+  if (parts.length !== Math.ceil(bytes / partSize)) throw Error('Invalid Linux guest manifest');
+  let loaded = 0, progress = -1;
+  async function loadPart(name, index) {
+    const start = index * partSize;
+    const end = Math.min(start + partSize, bytes);
+    let offset = start;
+    const part = await fetch('./runtime/' + name, { signal });
     if (!part.ok) throw Error('Could not load Linux guest file ' + name);
-    const buffer = new Uint8Array(await part.arrayBuffer());
-    image.set(buffer, offset);
-    offset += buffer.length;
-    status.textContent = 'Loading Linux image · ' + Math.round(100 * offset / bytes) + '%';
+    function append(chunk) {
+      if (offset + chunk.length > end) throw Error('Invalid Linux guest file ' + name);
+      image.set(chunk, offset);
+      offset += chunk.length;
+      loaded += chunk.length;
+      const percent = Math.floor(100 * loaded / bytes);
+      if (percent !== progress) {
+        progress = percent;
+        status.textContent = 'Loading Linux image · ' + progress + '%';
+      }
+    }
+    if (part.body?.getReader) {
+      const reader = part.body.getReader();
+      try {
+        for (;;) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          append(value);
+        }
+      } finally {
+        reader.releaseLock();
+      }
+    } else {
+      append(new Uint8Array(await part.arrayBuffer()));
+    }
+    if (offset !== end) throw Error('Incomplete Linux guest file ' + name);
   }
-  if (offset !== bytes) throw Error('Incomplete Linux image');
+  const batchSize = 3;
+  for (let index = 0; index < parts.length; index += batchSize) {
+    await Promise.all(parts.slice(index, index + batchSize).map((name, offset) =>
+      loadPart(name, index + offset)));
+  }
   return image.buffer;
 }
 
-async function bootLinux() {
+async function bootLinux(signal) {
   terminalText = 'Booting the local Linux guest…\n';
   line = '';
   decoder = new TextDecoder();
   paint();
-  const [{ V86 }, image] = await Promise.all([import('./runtime/libv86.mjs'), initrd()]);
+  const [{ V86 }, image] = await Promise.all([import('./runtime/libv86.mjs'), initrd(signal)]);
+  if (signal.aborted) throw signal.reason;
   status.textContent = 'Booting Linux';
   vm = new V86({
     wasm_path: './runtime/v86.wasm',
@@ -191,8 +225,10 @@ async function bootLinux() {
   await new Promise((resolve, reject) => {
     let recent = '';
     const timeout = setTimeout(() => finish(new Error('Linux did not reach its shell. Try running again.')), 300000);
+    const cancel = () => finish(signal.reason);
     function finish(error) {
       clearTimeout(timeout);
+      signal.removeEventListener('abort', cancel);
       vm.remove_listener('serial0-output-byte', listener);
       if (error) reject(error); else resolve();
     }
@@ -201,12 +237,13 @@ async function bootLinux() {
       if (recent.includes('LAB_EXCHANGE_FAILED')) finish(Error('Linux could not mount the editor file share.'));
       if (recent.includes('LAB_READY') && recent.includes('~ # ')) finish();
     }
+    signal.addEventListener('abort', cancel, { once: true });
     vm.add_listener('serial0-output-byte', receive);
     vm.add_listener('serial0-output-byte', listener);
   });
   status.textContent = 'Loading trace tools';
   for (const name of course.assets) {
-    const response = await fetch('./examples/' + name);
+    const response = await fetch('./examples/' + name, { signal });
     if (!response.ok) throw Error('Could not load ' + name);
     await vm.create_file('strace-' + name, new Uint8Array(await response.arrayBuffer()));
   }
@@ -233,9 +270,14 @@ $('run').onclick = async () => {
   try {
     if (!boot) {
       status.textContent = 'Loading Linux';
-      boot = bootLinux();
+      bootController = new AbortController();
+      $('stop').disabled = false;
+      boot = bootLinux(bootController.signal);
     }
     await boot;
+    if (bootController?.signal.aborted) throw bootController.signal.reason;
+    bootController = undefined;
+    $('stop').disabled = true;
     $('restart').disabled = true;
     enableShell(false);
     resultMarker = marker;
@@ -265,17 +307,25 @@ $('run').onclick = async () => {
     $('restart').disabled = false;
     vm.serial0_send(`sh ${scriptName}; printf '\\n${marker}%s\\n' "$?"\n`);
   } catch (error) {
+    const cancelled = bootController?.signal.aborted;
+    bootController?.abort();
+    bootController = undefined;
     if (vm) await vm.destroy().catch(() => {});
     vm = undefined;
     boot = undefined;
     $('restart').disabled = true;
     enableShell(false);
-    idle(error.message);
+    idle(cancelled ? 'Linux startup stopped. Run again to restart.' : error.message);
     $('stop').disabled = true;
   }
 };
 
 $('stop').onclick = () => {
+  if (bootController) {
+    $('stop').disabled = true;
+    bootController.abort();
+    return;
+  }
   if (!vm) return;
   vm.serial0_send('\x03');
   if (running) status.textContent = 'Interrupt sent to Linux';
