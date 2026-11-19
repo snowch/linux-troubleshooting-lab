@@ -20,7 +20,7 @@ export const walkthroughs = {
     "Filter on the expected configuration path, then test whether a spelling mistake can make the trace appear empty.",
     "The failing program reports startup failed. The expected configuration path has no matching line.",
     "command",
-    step("Supply an absolute path", "LAB_WORK names the current case directory. -P keeps calls associated with a matching path.", "-P \"$LAB_WORK/conf/settings\""),
+    step("Supply an absolute path", "LAB_WORK holds the absolute path to the current case directory. An absolute path starts at /. Use -P to keep calls associated with that path.", "-P \"$LAB_WORK/conf/settings\""),
     step("Limit the operations", "Intersect the path filter with the calls for opening, reading and closing.", "-e trace=openat,read,close")
   ),
   "string-limits": guide(
@@ -34,7 +34,7 @@ export const walkthroughs = {
     "Start a guest process before starting the tracer. The fixture waits for an attachment before opening its configuration file.",
     "Find the attachment message and the later openat() for the configuration. The fixture’s earlier startup can be absent.",
     "variant",
-    step("Start the program in the background", "The shell captures the PID of this particular guest process in $!.", "\"$LAB_BIN/fixture\" attach &\npid=$!"),
+    step("Start the program in the background", "A PID is the number Linux assigns to a process. The shell puts the PID of the background guest process in $!.", "\"$LAB_BIN/fixture\" attach &\npid=$!"),
     step("Attach to the recorded PID", "Use -p for a process already running. Attachment depends on ptrace permissions.", "strace -e trace=openat -p \"$pid\"")
   ),
   "save-trace": guide(
@@ -48,7 +48,7 @@ export const walkthroughs = {
     "Follow a parent and child while writing their traces to separate files. Use the timestamps and child PID to place events in order.",
     "Find the child’s missing-helper ENOENT and match its file suffix to the PID returned by wait4() in the parent’s file.",
     "variant",
-    step("Follow children and name each file", "-ff follows new processes and writes one trace per process when used with -o. -ttt puts an epoch timestamp on each line.", "strace -ff -ttt -o trace"),
+    step("Follow children and name each file", "-ff follows new processes and writes one trace per process when used with -o. The -ttt option adds a timestamp in seconds from a common starting point so you can compare the files.", "strace -ff -ttt -o trace"),
     step("Read files with their PID suffixes intact", "The loop prints the name of each trace before its contents.", "printf '\\n%s\\n' \"$file\"\n    cat \"$file\"")
   ),
   "syscall-summary": guide(
@@ -59,21 +59,21 @@ export const walkthroughs = {
     step("Count the operations under investigation", "Include file opens, reads and closes so the repeated probes can be compared with completed reads.", "-e trace=openat,read,close")
   ),
   "interrupted-read": guide(
-    "A parent blocks while reading a pipe. A signal arrives before the writer sends the byte. Compare the effect of SA_RESTART on the same read.",
+    "A process waits for a pipe read. SIGUSR1 invokes a handler, a function that responds to the signal. The SA_RESTART flag asks Linux to retry eligible calls when the handler returns.",
     "Find the parent’s blocked read and SIGUSR1 delivery. The failing program reports that its read was interrupted.",
     "variant",
     step("Follow the writer that sends the signal", "-f shows the child’s kill() and write() alongside the parent’s trace.", "strace -f"),
     step("Keep the signal setup and I/O in view", "rt_sigaction installs the handler and flags. sigreturn or rt_sigreturn marks the return from the handler.", "-e trace=read,write,kill,rt_sigaction,sigreturn,rt_sigreturn")
   ),
   "pending-signal": guide(
-    "The program blocks SIGUSR1 and sends it to itself. Use the wait’s argument to explain why a pending signal does not wake it.",
+    "The program blocks normal delivery of SIGUSR1 and sends the signal to itself. The undelivered signal is pending. The wait’s argument determines which signal it can collect.",
     "Find the call that blocks SIGUSR1, the wait for SIGUSR2 and the later pending set with SIGUSR1.",
     "variant",
-    step("Trace both waiting ABI names", "On this 32-bit guest the libc wrapper can use either the older or the time64 kernel syscall.", "rt_sigtimedwait,rt_sigtimedwait_time64"),
+    step("Trace both waiting ABI names", "The 32-bit guest can use the older system call or the time64 version, which accepts 64-bit time values.", "rt_sigtimedwait,rt_sigtimedwait_time64"),
     step("Observe the mask and pending set", "The selected calls show what was blocked, sent and still queued at the end.", "kill,rt_sigprocmask,rt_sigpending")
   ),
   "thread-wait": guide(
-    "A thread waits for a worker to publish a flag. The timed wait keeps the exercise bounded even if the wake never comes.",
+    "A thread is an execution path inside a process. Here two threads share one memory word. A futex wait can pause the reader until the worker wakes it or the deadline expires.",
     "Find the timed FUTEX_WAIT_PRIVATE and its ETIMEDOUT result. Check whether a worker woke that same address.",
     "variant",
     step("Trace threads and measure each call", "-f includes the worker. -T reports elapsed call time, which can include time spent blocked.", "strace -f -T"),
@@ -101,7 +101,7 @@ export const walkthroughs = {
     step("Recognise the x86 mapping syscall", "On 32-bit Linux the trace can show mmap2 for a libc mmap() call.", "mmap,mmap2,munmap")
   ),
   "terminal-control": guide(
-    "The program asks for terminal dimensions. Trace the descriptor to find out what kind of file received the request.",
+    "An ioctl() call requests a special operation from an open descriptor. TIOCGWINSZ asks for the terminal’s dimensions. Identify what kind of file receives that request here.",
     "Find the ioctl on the descriptor for conf/settings and its ENOTTY result.",
     "variant",
     step("Show what the descriptor refers to", "-yy attaches path or device information to the descriptor in the ioctl line.", "strace -yy"),
@@ -133,7 +133,7 @@ export const walkthroughs = {
     step('Follow changes in the process identity', 'The trace includes the calls that switch the fixture to its service user. The guest can show the 32-bit syscall names.', 'setuid,setuid32,setgid,setgid32'),
     step('Trace the failing open under that identity', 'The fixture tries one existing configuration file. The error from openat() tells you why that file could not be read.', '"$LAB_BIN/fixture" permission')),
   children: guide(
-    'A parent reports that its helper failed. Start with the parent’s trace, then follow the child to locate the failed call.',
+    'A process is a running program. The process that starts another is its parent. Start with the parent’s trace, then follow its child to locate the failed call.',
     'The parent observes status 127. Adding -f reveals the child’s execve("./missing-helper", …) and ENOENT.',
     'command',
     step('Trace the parent’s waits', 'wait4() reports the child’s exit status. Without -f, the trace shows the parent’s own system calls, even when the failure happened somewhere else.', 'strace -e trace=execve,wait4'),
@@ -151,7 +151,7 @@ export const walkthroughs = {
     step('Track the pipe across processes', 'pipe2() creates both ends, and close() releases a descriptor. With -f and -yy you can compare the same pipe identifier across parent and child.', 'strace -f -yy -e trace=pipe2,close,poll,read'),
     step('Wait for the end of the stream', 'The case uses poll() to bound the wait. The next read returns zero once the last writer is gone.', '"$LAB_BIN/fixture" pipe')),
   refused: guide(
-    'Find out whether a writable socket really connected. The fixture makes both attempts locally inside the guest.',
+    'Both endpoints use loopback, an address that sends traffic back inside the guest. Find out whether a ready-to-write event proves the client connected.',
     'Find ECONNREFUSED in the failing trace and SO_ERROR zero in the repaired one. In the repaired trace, identify the call that starts listening.',
     'variant',
     step('Keep the calls from setup through completion', 'The filter includes both the server setup and the client’s wait. A writable event can also report that connection setup failed.', 'strace -yy -e trace=bind,listen,connect,poll,getsockopt'),
