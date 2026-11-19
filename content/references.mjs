@@ -101,7 +101,8 @@ export const references = {
   pipeline: [
     setupTrace, pipe,
     man('dup.2', 'dup2() or dup3() can attach a specific descriptor number to a pipe end. Track whether standard output (1) or standard error (2) points to the pipe.', 'dup2(), dup3()'),
-    man('write.2', 'The first argument identifies the descriptor that receives the bytes. Read its annotation to see where ping went.')
+    man('write.2', 'The first argument identifies the descriptor that receives the bytes. Read its annotation to see where ping went.'),
+    man('writev.2', 'writev() sends a list of buffers. Look for the byte count in iov_len beside the buffer shown at iov_base.')
   ],
   'pipe-eof': [setupTrace, pipe, man('close.2', 'Closing a descriptor removes that process’s reference. Check other processes for another open descriptor referring to the same pipe end.'), poll],
   refused: [trace('socket descriptor annotations', '-yy decodes socket details when available. Compare listen() and connect() on the same loopback port.'), man('listen.2', 'listen() marks a bound stream socket as accepting connections.'), connect, socketError, poll],

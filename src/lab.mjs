@@ -9,22 +9,31 @@ const evidence = $('evidence');
 const terminal = $('terminal');
 const command = $('command');
 const status = $('runtime-status');
+const shellOutput = $('shell-output');
+const runButton = $('run');
 const encoder = new TextEncoder();
 let decoder = new TextDecoder();
 const serialByte = new Uint8Array(1);
 const key = 'linux-lab:' + course.slug + ':';
+const drafts = new Map();
+const draftMessages = new Map();
+const latestRuns = new Map();
+const earlierRuns = new Map();
 let lesson;
-let vm, boot, bootController, running = false, line = '', terminalText = '';
-let runNumber = 0, resultMarker = '';
+let vm, activeRun, guestReady = false, resetting = false, line = '', shellText = '';
+let runNumber = 0, storageReadUnavailable = false;
 
 function read(keyName) {
-  try { return localStorage.getItem(key + keyName); } catch { return null; }
+  try { return localStorage.getItem(key + keyName); }
+  catch { storageReadUnavailable = true; return null; }
 }
 function save(keyName, value) {
-  try { localStorage.setItem(key + keyName, value); } catch { /* editor stays usable */ }
+  try { localStorage.setItem(key + keyName, value); return true; }
+  catch { return false; }
 }
 function remove(keyName) {
-  try { localStorage.removeItem(key + keyName); } catch { /* storage unavailable */ }
+  try { localStorage.removeItem(key + keyName); return true; }
+  catch { return false; }
 }
 function theme(value) {
   document.documentElement.dataset.theme = value;
@@ -38,14 +47,27 @@ $('theme').onclick = () => {
 };
 
 function draftKey(field) { return lesson.id + '/' + field; }
-
-function showDraftNotice() {
+function draftValue(field, fallback) {
+  const name = draftKey(field);
+  return drafts.get(name) ?? read(name) ?? fallback;
+}
+function showWorkStatus() {
+  const commandMessage = draftMessages.get(draftKey('command')) ?? (storageReadUnavailable
+    ? 'The browser could not read saved work. You can work in this tab and download a copy before leaving.' : '');
+  setText($('command-status'), commandMessage);
+  setText($('evidence-status'), draftMessages.get(draftKey('evidence')) ?? '');
+  setText($('case-status'), draftMessages.get(draftKey('variant')) ?? '');
+  $('restore').hidden = source.value === lesson.command;
   $('draft-notice').hidden = source.value === lesson.command;
 }
-source.oninput = () => {
-  save(draftKey('command'), source.value);
-  showDraftNotice();
-};
+function writeDraft(field, value, label) {
+  const name = draftKey(field);
+  drafts.set(name, value);
+  const saved = save(name, value);
+  draftMessages.set(name, saved ? (field === 'variant' ? '' : label + ' saved in this browser.') :
+    'The browser could not save your ' + label.toLowerCase() + '. Keep working in this tab or download a copy before leaving.');
+  showWorkStatus();
+}
 $('edit-step').onclick = () => {
   if (tutorials[lesson.id].edit === 'variant') {
     variant.focus();
@@ -54,13 +76,38 @@ $('edit-step').onclick = () => {
   $('program').open = true;
   source.focus();
 };
-evidence.oninput = () => save(draftKey('evidence'), evidence.value);
-variant.onchange = () => save(draftKey('variant'), variant.value);
+source.oninput = () => {
+  writeDraft('command', source.value, 'Trace command');
+  showRun();
+};
+evidence.oninput = () => writeDraft('evidence', evidence.value, 'Notes');
+variant.onchange = () => {
+  writeDraft('variant', variant.value, 'Case selection');
+  $('earlier-run').open = false;
+  showRun();
+};
 $('restore').onclick = () => {
-  if (source.value !== lesson.command && !confirm('Restore the starter trace command?')) return;
-  remove(draftKey('command'));
+  if (!confirm('Replace your edited trace command with the starter command for this lesson? Your notes stay in place.')) return;
+  const name = draftKey('command');
+  const removed = remove(name);
+  if (removed) drafts.delete(name);
+  else drafts.set(name, lesson.command);
   source.value = lesson.command;
-  showDraftNotice();
+  draftMessages.set(name, removed ? 'Starter command restored.' :
+    'Starter command restored in this tab. The browser could not remove the saved edit, which may return when you reopen the lesson.');
+  showWorkStatus();
+  showRun();
+  source.focus({ preventScroll: true });
+};
+$('download-work').onclick = () => {
+  const copy = [lesson.title, 'Case: ' + caseLabel(variant.value), '', 'Trace command', source.value,
+    '', 'Trace evidence and diagnosis', evidence.value].join('\n') + '\n';
+  const url = URL.createObjectURL(new Blob([copy], { type: 'text/plain' }));
+  const link = document.createElement('a');
+  link.download = lesson.id + '-troubleshooting.txt';
+  link.href = url;
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 };
 
 const picker = $('lesson-picker');
@@ -94,7 +141,7 @@ function showReferences(id) {
 function showLesson(index) {
   lesson = course.lessons[index];
   const tutorial = tutorials[lesson.id];
-  $('program').open = false;
+  $('program').open = tutorial.edit === 'command';
   $('draft-notice').hidden = true;
   $('intro').textContent = tutorial.goal;
   $('read-result').textContent = tutorial.look;
@@ -114,7 +161,7 @@ function showLesson(index) {
   }));
   document.title = lesson.title + ' · ' + course.title;
   for (const [id, field] of Object.entries({
-    'lesson-title':'title', section:'section', question:'question',
+    'lesson-title':'title', section:'section', question:'question', instructions:'instructions',
     task:'task', hint:'hint', explanation:'explanation',
     transfer:'transfer'
   })) $(id).textContent = lesson[field] ?? course[field];
@@ -128,15 +175,16 @@ function showLesson(index) {
     link.textContent = label + ' · ' + other.title;
     $('next-lesson').append(link);
   }
-  $('edit-step').textContent = tutorial.edit === 'variant' ? 'Show the case control' : 'Show me where to edit';
-  source.value = read(draftKey('command')) ?? lesson.command;
+  $('edit-step').textContent = tutorial.edit === 'variant' ? 'Go to Case' : 'Go to Trace command';
+  source.value = draftValue('command', lesson.command);
   source.rows = Math.max(4, lesson.command.split('\n').length);
-  showDraftNotice();
   source.scrollTop = 0;
   source.scrollLeft = 0;
-  evidence.value = read(draftKey('evidence')) ?? '';
-  variant.value = read(draftKey('variant')) === 'fixed' ? 'fixed' : 'broken';
-  $('run').disabled = running;
+  evidence.value = draftValue('evidence', '');
+  variant.value = draftValue('variant', 'broken') === 'fixed' ? 'fixed' : 'broken';
+  $('earlier-run').open = false;
+  showWorkStatus();
+  showRun();
 }
 function showRoute(moveFocus = false) {
   const index = course.lessons.findIndex(item => '#' + item.id === location.hash);
@@ -148,7 +196,10 @@ function showRoute(moveFocus = false) {
   $('lesson-navigation').hidden = !inLesson;
   $('workbench').hidden = !inLesson;
   if (inLesson) void showLesson(index);
-  else document.title = course.title;
+  else {
+    lesson = undefined;
+    document.title = course.title;
+  }
   if (moveFocus) {
     if (!inLesson || !pickerFocused)
       $(inLesson ? 'lesson-title' : 'overview-title').focus({preventScroll: true});
@@ -162,55 +213,112 @@ document.querySelector('.skip-link').onclick = event => {
 addEventListener('hashchange', () => {
   if (location.hash !== '#main') showRoute(true);
 });
-showRoute();
-
 let repaint = 0;
+showRoute();
+function setText(element, value) {
+  if (element.textContent !== value) element.textContent = value;
+}
+function caseLabel(caseValue) {
+  return caseValue === 'fixed' ? 'Repaired' : 'Failing';
+}
+function outputKey(item, caseValue) {
+  return item.id + '/' + caseValue;
+}
 function paint() {
-  if (repaint) return;
-  repaint = requestAnimationFrame(() => {
+  if (!repaint) repaint = requestAnimationFrame(() => {
     repaint = 0;
-    const nearBottom = terminal.scrollHeight - terminal.scrollTop - terminal.clientHeight < 40;
-    terminal.textContent = (terminalText + line).replace(/\x1b\[[0-?]*[ -/]*[@-~]/g, '');
-    if (nearBottom) terminal.scrollTop = terminal.scrollHeight;
+    showOutput();
   });
 }
-function enableShell(enabled) {
-  command.disabled = !enabled;
-  $('shell').querySelector('button').disabled = !enabled;
+function output(element, text) {
+  const nearBottom = element.scrollHeight - element.scrollTop - element.clientHeight < 40;
+  setText(element, text.replace(/\x1b\[[0-?]*[ -/]*[@-~]/g, ''));
+  if (nearBottom) element.scrollTop = element.scrollHeight;
 }
-function idle(message) {
-  running = false;
-  resultMarker = '';
-  status.textContent = message;
-  $('run').disabled = false;
-  $('stop').disabled = !vm;
-  enableShell(Boolean(vm));
+function showOutput() {
+  const run = lesson && latestRuns.get(outputKey(lesson, variant.value));
+  const liveLine = run && run === activeRun && run.capture ? line : '';
+  output(terminal, run ? (run.text + liveLine || (run === activeRun ? 'Waiting for Linux output…' : 'This run produced no output.')) :
+    'Choose Run in Linux to see the trace for this case.');
+  output(shellOutput, shellText + (!activeRun?.submitted ? line : '') || 'Linux is off.');
+}
+function runSource(run) {
+  const command = run.trace === run.lesson.command.trim() ? 'the starter trace command' : 'an edited trace command';
+  return 'Run ' + run.number + ' used the ' + caseLabel(run.caseValue) + ' case and ' + command + '.';
+}
+function showRun() {
+  if (!lesson) return;
+  const name = outputKey(lesson, variant.value);
+  const run = latestRuns.get(name);
+  const earlier = earlierRuns.get(name);
+  const provenance = $('result-source');
+  provenance.hidden = !run;
+  if (run) setText(provenance, runSource(run) + (run.trace !== source.value.trim() ?
+    ' The trace command has changed since this run.' : ''));
+  $('earlier-run').hidden = !earlier;
+  if (earlier) {
+    setText($('earlier-source'), runSource(earlier));
+    setText($('earlier-output'), earlier.text);
+  }
+  const busy = Boolean(activeRun || resetting);
+  const message = resetting ? 'Resetting Linux…' : activeRun && activeRun !== run ?
+    'A run is active in ' + activeRun.lesson.title + ', ' + caseLabel(activeRun.caseValue) + ' case.' :
+    run?.message ?? (guestReady ? 'Linux is ready' : 'Linux is off');
+  setText(status, message);
+  if (busy) runButton.setAttribute('aria-disabled', 'true');
+  else runButton.removeAttribute('aria-disabled');
+  const stop = $('stop');
+  stop.hidden = !(activeRun?.controller || activeRun?.submitted);
+  stop.disabled = activeRun?.controller?.signal.aborted ?? false;
+  setText(stop, activeRun?.controller ? 'Stop loading Linux' : 'Interrupt run');
+  const shellReady = guestReady && !busy;
+  command.disabled = !shellReady;
+  $('shell').querySelector('button').disabled = !shellReady;
+  $('shell-stop').disabled = !shellReady;
+  $('restart').disabled = !guestReady || resetting || Boolean(activeRun && !activeRun.submitted);
+  showOutput();
+}
+function runMessage(run, message) {
+  run.message = message;
+  showRun();
+}
+function complete(run, message, finished = false) {
+  run.finished = finished;
+  activeRun = undefined;
+  line = '';
+  runMessage(run, message);
 }
 function receive(byte) {
+  const run = activeRun;
   if (byte === 10) {
-    const completed = line.replace(/\r/g, '');
-    if (resultMarker && completed.startsWith(resultMarker)) {
-      const exit = completed.slice(resultMarker.length);
-      if (/^\d+$/.test(exit)) {
-        idle(exit === '0' ? 'Run finished' : 'Run exited with status ' + exit);
-        line = '';
-        paint();
-        return;
-      }
-    }
-    if (!(resultMarker && completed.includes(resultMarker) && completed.includes('sh /exchange/run-')))
-      terminalText = (terminalText + completed + '\n').slice(-32000);
+    const completed = line;
     line = '';
+    if (run && completed === run.startMarker) {
+      run.capture = true;
+    } else if (run && completed === run.commandMarker) {
+      run.commandStarted = true;
+    } else if (run && completed.startsWith(run.resultMarker) && /^\d+$/.test(completed.slice(run.resultMarker.length))) {
+      const exit = completed.slice(run.resultMarker.length);
+      if (run.interrupt && (exit === '130' || exit === '143')) complete(run, 'Run interrupted');
+      else if (!run.commandStarted) complete(run, 'Fixture setup exited with status ' + exit);
+      else if (exit === '0') complete(run, 'Command finished with exit status 0', true);
+      else complete(run, 'Command exited with status ' + exit, true);
+    } else if (run?.capture) {
+      run.text = (run.text + completed + '\n').slice(-32000);
+    } else if (!run?.submitted) {
+      shellText = (shellText + completed + '\n').slice(-16000);
+    }
   } else if (byte === 8) {
     line = line.slice(0, -1);
   } else if (byte !== 13 && (byte >= 32 || byte === 9 || byte === 27)) {
     serialByte[0] = byte;
     line = (line + decoder.decode(serialByte, { stream: true })).slice(-5000);
+    if (run?.interrupt && line === '~ # ') complete(run, 'Run interrupted');
   }
   paint();
 }
 
-async function initrd(signal) {
+async function initrd(run, signal) {
   const response = await fetch('./runtime/parts.json', { signal });
   if (!response.ok) throw Error('Could not open the Linux guest manifest');
   const { parts, bytes } = await response.json();
@@ -234,7 +342,7 @@ async function initrd(signal) {
       const percent = Math.floor(100 * loaded / bytes);
       if (percent !== progress) {
         progress = percent;
-        status.textContent = 'Loading Linux image · ' + progress + '%';
+        runMessage(run, 'Loading Linux image · ' + progress + '%');
       }
     }
     if (part.body?.getReader) {
@@ -261,14 +369,14 @@ async function initrd(signal) {
   return image.buffer;
 }
 
-async function bootLinux(signal) {
-  terminalText = 'Booting the local Linux guest…\n';
+async function bootLinux(run, signal) {
+  shellText = '';
   line = '';
   decoder = new TextDecoder();
   paint();
-  const [{ V86 }, image] = await Promise.all([import('./runtime/libv86.mjs'), initrd(signal)]);
-  if (signal.aborted) throw signal.reason;
-  status.textContent = 'Booting Linux';
+  const [{ V86 }, image] = await Promise.all([import('./runtime/libv86.mjs'), initrd(run, signal)]);
+  signal.throwIfAborted();
+  runMessage(run, 'Booting Linux');
   vm = new V86({
     wasm_path: './runtime/v86.wasm',
     bios: { url: './runtime/seabios.bin' },
@@ -276,7 +384,8 @@ async function bootLinux(signal) {
     bzimage: { url: './runtime/vmlinuz-virt' },
     initrd: { buffer: image },
     cmdline: 'console=ttyS0,115200 rdinit=/init rootfstype=ramfs nokaslr panic=1 quiet',
-    memory_size: 768 * 1024 * 1024, filesystem: {}, autostart: true
+    memory_size: 768 * 1024 * 1024, filesystem: {},
+    disable_keyboard: true, disable_mouse: true, autostart: true
   });
   await new Promise((resolve, reject) => {
     let recent = '';
@@ -297,57 +406,58 @@ async function bootLinux(signal) {
     vm.add_listener('serial0-output-byte', receive);
     vm.add_listener('serial0-output-byte', listener);
   });
-  status.textContent = 'Loading trace tools';
+  runMessage(run, 'Loading trace tools');
   for (const name of course.assets) {
     const response = await fetch('./examples/' + name, { signal });
     if (!response.ok) throw Error('Could not load ' + name);
     await vm.create_file('strace-' + name, new Uint8Array(await response.arrayBuffer()));
   }
-  enableShell(true);
-  $('restart').disabled = false;
+  signal.throwIfAborted();
+  guestReady = true;
 }
 
-$('run').onclick = async () => {
-  if (running) return;
-  status.textContent = 'Preparing source';
+runButton.onclick = async () => {
+  if (!lesson || activeRun || resetting) return;
   const trace = source.value.trim();
   if (!trace) {
-    status.textContent = 'Enter a trace command';
+    setText(status, 'Enter a trace command');
     source.focus();
     return;
   }
-  const selectedCase = variant.value;
-  const prefix = 'run-' + (++runNumber) + '-';
-  const marker = '__LAB_RESULT_' + runNumber + '__';
-  running = true;
-  $('run').disabled = true;
-  $('restart').disabled = true;
-  enableShell(false);
+  const caseValue = variant.value;
+  const number = ++runNumber;
+  const marker = '__LAB_RUN_' + number;
+  const run = { lesson, caseValue, trace, number, text: '',
+    startMarker: marker + '_START__', commandMarker: marker + '_COMMAND__', resultMarker: marker + '_EXIT__' };
+  const name = outputKey(lesson, caseValue);
+  const earlier = latestRuns.get(name);
+  if (earlier?.finished) earlierRuns.set(name, earlier);
+  $('earlier-run').open = false;
+  latestRuns.set(name, run);
+  activeRun = run;
+  terminal.scrollTop = 0;
+  runMessage(run, guestReady ? 'Preparing the case' : 'Loading Linux');
   try {
-    if (!boot) {
-      status.textContent = 'Loading Linux';
-      bootController = new AbortController();
-      $('stop').disabled = false;
-      boot = bootLinux(bootController.signal);
+    if (!guestReady) {
+      run.controller = new AbortController();
+      showRun();
+      await bootLinux(run, run.controller.signal);
+      run.controller = undefined;
     }
-    await boot;
-    if (bootController?.signal.aborted) throw bootController.signal.reason;
-    bootController = undefined;
-    $('stop').disabled = true;
-    $('restart').disabled = true;
-    enableShell(false);
-    resultMarker = marker;
-    const work = '/tmp/strace-lab/case-' + runNumber;
+    const prefix = 'run-' + number + '-';
+    const work = '/tmp/strace-lab/case-' + number;
     const scriptName = '/exchange/' + prefix + 'exercise.sh';
     const setup = [
       'set -e',
       `trap 'rm -f ${scriptName}; rm -rf ${work}' EXIT`,
       'trap "exit 130" INT TERM',
+      `printf '\n${run.startMarker}\n'`,
       'export LAB_WORK=' + work,
-      'export LAB_VARIANT=' + selectedCase,
+      'export LAB_VARIANT=' + caseValue,
       'export LAB_BIN=/tmp/strace-lab/bin',
       '. /exchange/strace-prepare.sh',
       'export PATH="$LAB_BIN:$PATH"',
+      `printf '\n${run.commandMarker}\n'`,
       'set +e',
       '(',
       trace,
@@ -355,58 +465,55 @@ $('run').onclick = async () => {
     ];
     const script = setup.join('\n') + '\n';
     await vm.create_file(prefix + 'exercise.sh', encoder.encode(script));
-    terminalText = '';
-    line = '';
-    terminal.scrollTop = 0;
-    status.textContent = 'Running in Linux';
-    $('stop').disabled = false;
-    $('restart').disabled = false;
-    vm.serial0_send(`sh ${scriptName}; printf '\\n${marker}%s\\n' "$?"\n`);
+    run.submitted = true;
+    runMessage(run, 'Running in Linux');
+    vm.serial0_send(`sh ${scriptName}; printf '\\n${run.resultMarker}%s\\n' "$?"\n`);
   } catch (error) {
-    const cancelled = bootController?.signal.aborted;
-    bootController?.abort();
-    bootController = undefined;
+    const cancelled = run.controller?.signal.aborted;
+    run.controller?.abort();
+    run.controller = undefined;
     if (vm) await vm.destroy().catch(() => {});
     vm = undefined;
-    boot = undefined;
-    $('restart').disabled = true;
-    enableShell(false);
-    idle(cancelled ? 'Linux startup stopped. Run again to restart.' : error.message);
-    $('stop').disabled = true;
+    guestReady = false;
+    run.text = cancelled ? '' : error.message;
+    complete(run, cancelled ? 'Linux startup stopped. Run again to restart.' : 'Could not start the run');
   }
 };
 
 $('stop').onclick = () => {
-  if (bootController) {
-    $('stop').disabled = true;
-    bootController.abort();
+  if (activeRun?.controller) {
+    activeRun.controller.abort();
+    runMessage(activeRun, 'Stopping Linux startup…');
     return;
   }
-  if (!vm) return;
+  if (!vm || !activeRun?.submitted) return;
+  activeRun.interrupt = true;
+  runMessage(activeRun, 'Interrupt sent to Linux');
   vm.serial0_send('\x03');
-  if (running) status.textContent = 'Interrupt sent to Linux';
 };
+$('shell-stop').onclick = () => vm?.serial0_send('\x03');
 $('restart').onclick = async () => {
-  if (!vm || !confirm('Reset Linux and discard its temporary files? Commands and notes are kept.')) return;
-  $('restart').disabled = true;
-  $('run').disabled = true;
-  $('stop').disabled = true;
-  running = true;
-  enableShell(false);
+  if (!guestReady || resetting || !confirm('Reset Linux and discard its temporary files? Commands and notes are kept.')) return;
+  resetting = true;
+  if (activeRun) complete(activeRun, 'Run ended when Linux was reset');
   const old = vm;
   vm = undefined;
-  boot = undefined;
-  resultMarker = '';
-  await old.destroy();
-  terminalText = 'Linux has been reset. Run the experiment to start again.\n';
-  line = '';
-  paint();
-  idle('Linux is off');
-  $('stop').disabled = true;
+  guestReady = false;
+  showRun();
+  try {
+    await old.destroy();
+    shellText = 'Linux has been reset. Choose Run in Linux to start it again.\n';
+  } catch (error) {
+    shellText = 'Could not finish resetting Linux: ' + error.message;
+  } finally {
+    resetting = false;
+    line = '';
+    showRun();
+  }
 };
 $('shell').onsubmit = event => {
   event.preventDefault();
-  if (!vm || running || !command.value.trim()) return;
+  if (!guestReady || activeRun || resetting || !command.value.trim()) return;
   vm.serial0_send(command.value + '\n');
   command.value = '';
 };

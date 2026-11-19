@@ -42,7 +42,7 @@ export const walkthroughs = {
     "The program prints startup failed first. The saved file contains the openat() failure and process-exit line.",
     "variant",
     step("Send tracer output to a file", "The trace file is separate from the program’s standard output.", "strace -o calls.log"),
-    step("Review the saved evidence", "The file is printed before this run’s temporary directory is removed. The lesson notes persist in the browser.", "cat calls.log")
+    step("Review the saved evidence", "The file is printed before this run’s temporary directory is removed. Copy any traces you want to keep into Trace evidence and diagnosis.", "cat calls.log")
   ),
   "trace-per-process": guide(
     "Follow a parent and child while writing their traces to separate files. Use the timestamps and child PID to place events in order.",
@@ -54,7 +54,7 @@ export const walkthroughs = {
   "syscall-summary": guide(
     "Count calls before examining every line. Both cases can read their required file, but one makes repeated unnecessary probes.",
     "Find the openat row. The failing case attempts the optional path twelve times and still completes the required read.",
-    "variant",
+    "command",
     step("Collect a summary table", "-c aggregates call counts, errors and time. It omits individual arguments and the order of events.", "strace -c"),
     step("Count the operations under investigation", "Include file opens, reads and closes so the repeated probes can be compared with completed reads.", "-e trace=openat,read,close")
   ),
@@ -115,7 +115,7 @@ export const walkthroughs = {
     step("Gather the file and process evidence", "Keep descriptor annotations and the key syscalls for determining whether the worker reached sync.", "-yy -e trace=open,openat,write,fsync,close,wait4")
   ),
   'first-trace': guide(
-    'A program says “startup failed”. Start with one question you can answer from the kernel’s evidence. Which path was it trying to open?',
+    'strace shows system calls, the requests a program makes to the Linux kernel. A successful openat() returns a file descriptor, the number the program uses for the open file.',
     'Find the openat() line with conf/setting. The return value is -1 and ENOENT means the path was not found.',
     'variant',
     step('Ask for only the calls relevant to the symptom', 'The program reads configuration at startup. This filter keeps openat() calls in view while skipping unrelated work.', 'strace -e trace=openat'),
@@ -128,7 +128,7 @@ export const walkthroughs = {
     step('Select the working-directory fixture', 'Both runs use the same configuration name. The selected case determines which directory the fixture enters.', '"$LAB_BIN/fixture" cwd')),
   permissions: guide(
     'Tell a path that is missing apart from a path that exists but cannot be read by the program’s user.',
-    'Find the identity change, then compare EACCES for conf/private with the successful open of conf/public.',
+    'Find the process’s change to user 65534. Compare EACCES (permission denied) for conf/private with the descriptor returned for conf/public.',
     'variant',
     step('Follow changes in the process identity', 'The trace includes the calls that switch the fixture to its service user. The guest can show the 32-bit syscall names.', 'setuid,setuid32,setgid,setgid32'),
     step('Trace the failing open under that identity', 'The fixture tries one existing configuration file. The error from openat() tells you why that file could not be read.', '"$LAB_BIN/fixture" permission')),
@@ -140,13 +140,13 @@ export const walkthroughs = {
     step('Start the fixture with a helper process', 'The launch case forks a child. Keep this target and add -f to the strace options for the second run.', '"$LAB_BIN/fixture" launch')),
   pipeline: guide(
     'Follow four bytes of text through a shell pipeline and explain why the consumer might count zero.',
-    'Find the write containing ping. The failing writer sends it to the terminal and wc reads zero bytes. The repaired writer sends four bytes into the pipe.',
+    'Find write() or writev() carrying ping. Check iov_len=4 and the descriptor annotation. If output interleaves, locate iov_base=\"0\" or iov_base=\"4\" to read the count sent by wc. iov_base displays the buffer contents here.',
     'variant',
-    step('Follow both sides with descriptor annotations', '-f follows children, and -yy describes what a descriptor refers to. Focus on the write carrying the text.', 'strace -f -yy -e trace=pipe,pipe2,dup2,dup3,write'),
+    step('Follow both sides with descriptor annotations', '-f follows children, and -yy describes what a descriptor refers to. Focus on the write carrying the text.', 'strace -f -yy -e trace=pipe,pipe2,dup2,dup3,write,writev'),
     step('Notice the redirect in the failing case', 'The shell routes the producer’s output to descriptor 2. That leaves the pipe empty for wc, which reads its own standard input.', 'printf ping >&2 | wc -c')),
   'pipe-eof': guide(
     'Explain why an empty pipe has no EOF while a child still owns a copy of its writer.',
-    'Identify the pipe the parent polls. Compare its deadline with the repaired POLLHUP and read returning zero.',
+    'EOF means end of file or stream. Find the pipe in the parent’s poll() arguments. If the call is split across lines, match the continued poll line by the process number. The repaired read returns zero once all writers are closed and any queued bytes have been read.',
     'variant',
     step('Track the pipe across processes', 'pipe2() creates both ends, and close() releases a descriptor. With -f and -yy you can compare the same pipe identifier across parent and child.', 'strace -f -yy -e trace=pipe2,close,poll,read'),
     step('Wait for the end of the stream', 'The case uses poll() to bound the wait. The next read returns zero once the last writer is gone.', '"$LAB_BIN/fixture" pipe')),
@@ -166,6 +166,6 @@ export const walkthroughs = {
     'Produce a short diagnosis for a CLI that prints only “startup failed”. Find the first call that blocks the application’s own startup and collect evidence that the repair worked.',
     'Record the failing call and its context before opening the explanation. In the repaired run, check both configuration loading and child startup.',
     'command',
-    step('Trace the system calls that separate your hypotheses', 'The starter includes path lookup and process launch calls. Narrow that list if it makes the important evidence easier to see.', 'strace -f -yy -e trace=chdir,openat,execve,wait4'),
+    step('Trace the system calls that separate your hypotheses', 'The starter includes both path lookup and helper launch. Temporarily focus on the path lookup before restoring the starter to confirm that the helper ran.', 'strace -f -yy -e trace=chdir,openat,execve,wait4'),
     step('Run the complete startup case', 'This fixture combines what you learned about paths and child processes. A failure in an earlier operation can prevent later calls from appearing at all.', '"$LAB_BIN/fixture" startup')),
 };
