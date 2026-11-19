@@ -16,6 +16,7 @@ button,select,input{font:inherit}
 button,select{min-height:42px;padding:.34rem .68rem;border:1px solid var(--line);border-radius:.4rem;background:var(--paper);color:var(--ink);cursor:pointer}
 button:hover:enabled{border-color:var(--accent)}
 button:disabled{opacity:.5;cursor:default}
+button[aria-disabled="true"]{opacity:.5;cursor:default}
 .primary{background:var(--accent);border-color:var(--accent);color:var(--on-accent);font-weight:600}
 .layout{max-width:88rem;margin:0 auto;padding:clamp(1.5rem,4vw,3.25rem) clamp(1rem,4vw,3rem)}
 .lesson-picker{display:flex;align-items:center;flex-wrap:wrap;gap:.4rem .65rem;margin-bottom:1.25rem}
@@ -34,6 +35,16 @@ p{margin:.65rem 0 1rem}
 .workspace{background:var(--paper);border:1px solid var(--line);border-radius:.55rem;overflow:hidden}
 .toolbar,#shell{padding:.55rem .7rem}
 .toolbar label,#shell label{font-weight:600}
+.edit-label{border-top:1px solid var(--line)}
+.output-panel{border-top:1px solid var(--line)}
+.output-panel h3{margin:.65rem .7rem .3rem;font-size:1rem}
+.output-panel p{margin:.3rem .7rem .6rem;color:var(--muted)}
+.notice{font-size:.9rem;color:var(--muted)}
+.notice:empty{margin:0;padding:0}
+.output-panel summary{margin-inline:.7rem}
+#result-source{color:var(--ink)}
+#guest-tools{margin-top:1rem}
+#download-work{margin-bottom:.45rem}
 textarea,pre,#command{font: .93rem/1.55 PlexMono,monospace}
 textarea,pre{background:var(--code);color:var(--code-ink);margin:0;padding:.85rem;display:block;width:100%;border:0;tab-size:4}
 textarea{resize:vertical;min-height:6rem}

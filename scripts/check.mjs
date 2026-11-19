@@ -31,7 +31,7 @@ const ids = new Set();
 for (const lesson of course.lessons) {
   assert(!ids.has(lesson.id), 'duplicate lesson ID');
   ids.add(lesson.id);
-  for (const key of ['section', 'title', 'intro', 'question', 'task', 'hint', 'explanation', 'transfer', 'command'])
+  for (const key of ['section', 'title', 'intro', 'question', 'evidence', 'task', 'hint', 'explanation', 'transfer', 'command'])
     assert(typeof lesson[key] === 'string' && lesson[key].trim(), lesson.id + ': ' + key);
   assert(lesson.command.startsWith('strace '), 'starter command invokes strace');
 }
