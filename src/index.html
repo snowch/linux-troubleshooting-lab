@@ -43,7 +43,7 @@
         </section>
         <section aria-labelledby="offline-help">
           <h2 id="offline-help">Learning offline</h2>
-          <p>The lab runs Linux in WebAssembly. Choose <strong>Download for offline use</strong> while connected, then reopen this course in the same browser.</p>
+          <p>The lab runs Linux in your browser. While connected, choose <strong>Download for offline use</strong> and wait for <strong>Available offline</strong>. Reopen the course at this address in the same browser profile.</p>
         </section>
       </div>
       <nav aria-labelledby="outline-title">
@@ -65,7 +65,8 @@
         <ol id="walkthrough" class="walkthrough"></ol>
       </section>
       <section aria-labelledby="workbench-heading">
-        <h2 id="workbench-heading">Run it in Linux</h2>
+        <h2 id="workbench-heading">Trace workbench</h2>
+        <p id="instructions"></p>
         <div class="workspace">
           <div class="toolbar">
             <label for="variant">Case</label>
@@ -74,41 +75,47 @@
               <option value="fixed">Repaired</option>
             </select>
           </div>
+          <p id="case-status" class="notice toolbar" role="status"></p>
           <details id="program" class="program-tools">
             <summary>Edit the trace command</summary>
             <div class="toolbar">
               <label for="source">Trace command</label>
-              <button type="button" id="restore">Restore command</button>
+              <button type="button" id="restore" hidden>Restore starter command</button>
             </div>
             <textarea id="source" spellcheck="false" autocapitalize="off" autocomplete="off" rows="4"></textarea>
           </details>
+          <p id="draft-notice" class="toolbar notice" hidden>Run in Linux uses your edit. To repeat the original, open Edit the trace command and choose Restore starter command. Use Download command and notes first if you want a copy.</p>
+          <p id="command-status" class="notice toolbar" role="status"></p>
           <div class="toolbar controls">
             <button type="button" id="run" class="primary">Run in Linux</button>
-            <button type="button" id="stop" disabled>Interrupt</button>
-            <button type="button" id="restart" disabled>Reset Linux</button>
+            <button type="button" id="stop" hidden>Interrupt run</button>
             <span id="runtime-status" role="status">Linux is off</span>
           </div>
-          <pre id="terminal" aria-label="Linux console output" tabindex="0">Run in Linux to see the program output and trace.</pre>
-          <details class="program-tools">
-            <summary>Open Linux shell</summary>
-            <form id="shell">
-              <label for="command">Shell command</label>
-              <input id="command" type="text" spellcheck="false" autocomplete="off" autocapitalize="off" disabled placeholder="Enter a command after Linux boots">
-              <button type="submit" disabled>Send</button>
-            </form>
-          </details>
+          <section class="output-panel" aria-labelledby="output-heading">
+            <h3 id="output-heading">Linux output</h3>
+            <p id="result-source" hidden></p>
+            <p>A failing fixture can exit with a nonzero status. Follow the trace to find the cause.</p>
+            <pre id="terminal" aria-labelledby="output-heading" tabindex="0">Choose Run in Linux to see the trace for this case.</pre>
+            <details id="earlier-run" hidden>
+              <summary>Previous output for this case</summary>
+              <p id="earlier-source"></p>
+              <pre id="earlier-output" aria-label="Previous Linux output" tabindex="0"></pre>
+            </details>
+          </section>
         </div>
-        <p id="draft-notice" hidden>Your saved trace command will run. Choose Restore command to repeat the original example.</p>
         <p class="read-result"><strong>Read the result.</strong> <span id="read-result"></span></p>
       </section>
       <section class="lesson-task" aria-labelledby="change-heading">
         <h2 id="change-heading">Compare the evidence</h2>
         <p id="task"></p>
         <button type="button" id="edit-step"></button>
-        <label for="evidence">Evidence and diagnosis</label>
+        <p>Switch <strong>Case</strong> to reread its last output during this visit. The editor keeps the same trace command.</p>
+        <label for="evidence">Trace evidence and diagnosis</label>
         <textarea id="evidence" rows="4" spellcheck="false"></textarea>
-        <details><summary>Hint</summary><p id="hint"></p></details>
-        <details><summary>Compare with the worked explanation</summary><p id="explanation"></p></details>
+        <p id="evidence-status" class="notice" role="status"></p>
+        <button type="button" id="download-work">Download command and notes</button>
+        <details><summary>Trace reading hint</summary><p id="hint"></p></details>
+        <details><summary>Worked diagnosis</summary><p id="explanation"></p></details>
         <p id="transfer" class="question"></p>
       </section>
       <details id="lesson-references" class="lesson-references">
@@ -126,10 +133,24 @@
           <ul id="reference-list"></ul>
         </div>
       </details>
+      <details id="guest-tools" class="program-tools">
+        <summary>Linux shell and guest reset</summary>
+        <p>The shell opens after the first run. Resetting Linux clears temporary guest files. Your command and notes stay in the editor.</p>
+        <pre id="shell-output" aria-label="Interactive Linux shell output" tabindex="0">Linux is off.</pre>
+        <form id="shell">
+          <label for="command">Shell command</label>
+          <input id="command" type="text" spellcheck="false" autocomplete="off" autocapitalize="off" disabled>
+          <button type="submit" disabled>Send to shell</button>
+        </form>
+        <div class="toolbar">
+          <button type="button" id="shell-stop" disabled>Interrupt shell command</button>
+          <button type="button" id="restart" disabled>Reset Linux</button>
+        </div>
+      </details>
       <nav id="next-lesson" aria-label="Course progression"></nav>
     </article>
     <noscript>This course needs JavaScript to edit the trace command and boot Linux in WebAssembly.</noscript>
   </main>
-  <footer>Runs in an isolated Linux guest on this device. Commands and notes are saved in this browser.</footer>
+  <footer>Runs in an isolated Linux guest on this device.</footer>
 </body>
 </html>
