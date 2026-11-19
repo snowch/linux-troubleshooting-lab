@@ -12,6 +12,7 @@ header{border-bottom:1px solid var(--line);background:var(--paper)}
 .header-inner{max-width:1120px;margin:auto;padding:.82rem clamp(16px,4vw,44px);display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap}
 .brand{font-size:1.15rem;font-weight:700;text-decoration:none}
 .actions,.toolbar{display:flex;align-items:center;flex-wrap:wrap;gap:.45rem .65rem}
+.actions{margin-inline-start:auto}
 button,select,input{font:inherit}
 button,select{min-height:42px;padding:.34rem .68rem;border:1px solid var(--line);border-radius:.4rem;background:var(--paper);color:var(--ink);cursor:pointer}
 button:hover:enabled{border-color:var(--accent)}

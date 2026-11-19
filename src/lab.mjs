@@ -142,6 +142,7 @@ function showRoute(moveFocus = false) {
   const inLesson = index >= 0;
   const pickerFocused = document.activeElement === picker;
   $('overview').hidden = inLesson;
+  $('overview-link').hidden = !inLesson;
   $('lesson-navigation').hidden = !inLesson;
   $('workbench').hidden = !inLesson;
   if (inLesson) void showLesson(index);
