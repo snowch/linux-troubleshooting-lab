@@ -238,7 +238,8 @@ function output(element, text) {
 function showOutput() {
   const run = lesson && latestRuns.get(outputKey(lesson, variant.value));
   const liveLine = run && run === activeRun && run.capture ? line : '';
-  output(terminal, run ? (run.text + liveLine || (run === activeRun ? 'Waiting for Linux output…' : 'This run produced no output.')) :
+  const traceOutput = run ? run.text + liveLine : '';
+  output(terminal, run ? (traceOutput.trim() ? traceOutput : run === activeRun ? 'Waiting for Linux output…' : 'This run produced no output.') :
     'Choose Run in Linux to see the trace for this case.');
   output(shellOutput, shellText + (!activeRun?.submitted ? line : '') || 'Linux is off.');
 }

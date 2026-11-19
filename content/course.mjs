@@ -5,7 +5,7 @@ export const course = {
     "description": "Use strace to read and filter system calls, attach to a running process, save trace files and compare syscall summaries. Diagnose file access, process and thread waits, resource limits and loopback networking in an offline Linux guest.",
     "prerequisites": "You should be able to read a basic shell command. The lessons explain Linux tracing as you go. The page provides the files, processes and local services."
   },
-  "instructions": "The page prepares a fresh example for each run. Choose Failing under Case and select Run in Linux. If the command has been edited, save a copy with Download command and notes before you use Restore starter command to repeat the original.",
+  "instructions": "The page prepares a fresh example for each run. Choose Failing under Case and select Run in Linux.",
   "lessons": [
     {
       "id": "first-trace",
@@ -254,7 +254,7 @@ export const course = {
       "command": "strace -yy -e trace=open,openat,ioctl,close \"$LAB_BIN/fixture\" terminal-control",
       "intro": "The program asks for terminal dimensions. Trace the descriptor to find out what kind of file received the request.",
       "question": "Why does TIOCGWINSZ fail even though the descriptor is valid?",
-      "task": "Record the descriptor annotation and result on the TIOCGWINSZ line. Choose Repaired under Case and select Run in Linux. Compare the annotated destination and the value after the equals sign. The guest console may return zero dimensions on success.",
+      "task": "Find the descriptor from the open of conf/settings and record the TIOCGWINSZ result for that descriptor. Choose Repaired under Case and select Run in Linux. Use the descriptor from the fixture’s open of /dev/ttyS0 to find its TIOCGWINSZ result. A later query on descriptor 1 can come from printing the result. Zero dimensions are possible on success.",
       "hint": "Valid file descriptors can support different ioctl requests. Compare a configuration file with the guest’s serial console.",
       "explanation": "The regular file does not support TIOCGWINSZ and Linux returns ENOTTY. The repaired run opens the guest’s serial console and the ioctl succeeds.",
       "transfer": "How could a CLI handle redirected output if it cannot query terminal dimensions?"
