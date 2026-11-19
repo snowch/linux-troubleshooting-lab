@@ -130,6 +130,7 @@ function showLesson(index) {
   }
   $('edit-step').textContent = tutorial.edit === 'variant' ? 'Show the case control' : 'Show me where to edit';
   source.value = read(draftKey('command')) ?? lesson.command;
+  source.rows = Math.max(4, lesson.command.split('\n').length);
   showDraftNotice();
   source.scrollTop = 0;
   source.scrollLeft = 0;
@@ -142,6 +143,7 @@ function showRoute(moveFocus = false) {
   const inLesson = index >= 0;
   const pickerFocused = document.activeElement === picker;
   $('overview').hidden = inLesson;
+  $('overview-icon').hidden = inLesson;
   $('overview-link').hidden = !inLesson;
   $('lesson-navigation').hidden = !inLesson;
   $('workbench').hidden = !inLesson;

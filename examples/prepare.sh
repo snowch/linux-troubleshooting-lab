@@ -3,7 +3,8 @@ mkdir -p "$LAB_BIN"
 if [ ! -x "$LAB_BIN/fixture" ]; then
     echo 'Building the lab fixtures in Linux…'
     cp /exchange/strace-fixtures.c "$LAB_BIN/fixtures.c"
-    gcc -std=c11 -Wall -Wextra -Werror "$LAB_BIN/fixtures.c" -o "$LAB_BIN/fixture.next"
+    cp /exchange/strace-diagnostics.c "$LAB_BIN/diagnostics.c"
+    gcc -std=c11 -Wall -Wextra -Werror -pthread "$LAB_BIN/fixtures.c" "$LAB_BIN/diagnostics.c" -o "$LAB_BIN/fixture.next"
     mv "$LAB_BIN/fixture.next" "$LAB_BIN/fixture"
 fi
 if [ ! -x "$LAB_BIN/strace" ]; then

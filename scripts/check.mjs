@@ -44,7 +44,7 @@ for (const lesson of course.lessons) {
   }
   for (const key of ['section', 'title', 'intro', 'question', 'task', 'hint', 'explanation', 'transfer', 'command'])
     assert(typeof lesson[key] === 'string' && lesson[key].trim(), lesson.id + ': ' + key);
-  assert(lesson.command.startsWith('strace '), 'starter command invokes strace');
+  assert(/^strace\s/m.test(lesson.command), 'starter command invokes strace');
 }
 assert.equal(Object.keys(references).length, ids.size, 'one reference list per lesson');
 console.log(`Checked ${ids.size} lessons and ${offlinePaths.size} offline assets`);

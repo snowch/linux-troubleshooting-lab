@@ -2,6 +2,118 @@ const step = (heading, text, code) => ({ heading, text, code });
 const guide = (goal, look, edit, ...steps) => ({ goal, look, edit, steps });
 
 export const walkthroughs = {
+  "file-flow": guide(
+    "Follow a configuration file from open to close. Use descriptor annotations to pick out the reads belonging to that file.",
+    "Find the openat() for conf/setting. It returns -1, so there is no corresponding read on that file.",
+    "variant",
+    step("Show the descriptor’s path", "-yy annotates a descriptor with its associated file when that information is available.", "strace -yy"),
+    step("Keep the calls for the file’s lifetime", "Track the same descriptor through creation, use and release. Startup can open other files first.", "-e trace=openat,read,close")
+  ),
+  "filter-failures": guide(
+    "Narrow a noisy trace by system call class and by outcome. Look for the path tied to the application symptom.",
+    "Locate the failed conf/setting lookup. Other failures can belong to ordinary startup probes.",
+    "command",
+    step("Select a syscall class", "%file includes pathname-taking calls such as openat() and chdir().", "-e trace=%file"),
+    step("Select a syscall outcome", "status=failed keeps only calls with a kernel-reported error. It can hide context needed to explain the failure.", "-e status=failed")
+  ),
+  "filter-path": guide(
+    "Filter on the expected configuration path, then test whether a spelling mistake can make the trace appear empty.",
+    "The failing program reports startup failed. The expected configuration path has no matching line.",
+    "command",
+    step("Supply an absolute path", "LAB_WORK names the current case directory. -P keeps calls associated with a matching path.", "-P \"$LAB_WORK/conf/settings\""),
+    step("Limit the operations", "Intersect the path filter with the calls for opening, reading and closing.", "-e trace=openat,read,close")
+  ),
+  "string-limits": guide(
+    "A trace can shorten string arguments even when the program writes the entire message. Inspect how much detail the trace shows.",
+    "The write line shows a shortened string and a return value larger than eight. The application prints the full message.",
+    "command",
+    step("Limit the printed argument", "-s sets how many bytes strace prints for string arguments. The lab uses sample text only.", "strace -s 8"),
+    step("Keep one output call in view", "Filter on write() so the argument and return value are easy to compare.", "-e trace=write")
+  ),
+  "attach-process": guide(
+    "Start a guest process before starting the tracer. The fixture waits for an attachment before opening its configuration file.",
+    "Find the attachment message and the later openat() for the configuration. The fixture’s earlier startup can be absent.",
+    "variant",
+    step("Start the program in the background", "The shell captures the PID of this particular guest process in $!.", "\"$LAB_BIN/fixture\" attach &\npid=$!"),
+    step("Attach to the recorded PID", "Use -p for a process already running. Attachment depends on ptrace permissions.", "strace -e trace=openat -p \"$pid\"")
+  ),
+  "save-trace": guide(
+    "Write the trace to a file so the program’s output and the diagnostic evidence can be read separately.",
+    "The program prints startup failed first. The saved file contains the openat() failure and process-exit line.",
+    "variant",
+    step("Send tracer output to a file", "The trace file is separate from the program’s standard output.", "strace -o calls.log"),
+    step("Review the saved evidence", "The file is printed before this run’s temporary directory is removed. The lesson notes persist in the browser.", "cat calls.log")
+  ),
+  "trace-per-process": guide(
+    "Follow a parent and child while writing their traces to separate files. Use the timestamps and child PID to place events in order.",
+    "Find the child’s missing-helper ENOENT and match its file suffix to the PID returned by wait4() in the parent’s file.",
+    "variant",
+    step("Follow children and name each file", "-ff follows new processes and writes one trace per process when used with -o. -ttt puts an epoch timestamp on each line.", "strace -ff -ttt -o trace"),
+    step("Read files with their PID suffixes intact", "The loop prints the name of each trace before its contents.", "printf '\\n%s\\n' \"$file\"\n    cat \"$file\"")
+  ),
+  "syscall-summary": guide(
+    "Count calls before examining every line. Both cases can read their required file, but one makes repeated unnecessary probes.",
+    "Find the openat row. The failing case attempts the optional path twelve times and still completes the required read.",
+    "variant",
+    step("Collect a summary table", "-c aggregates call counts, errors and time. It omits individual arguments and the order of events.", "strace -c"),
+    step("Count the operations under investigation", "Include file opens, reads and closes so the repeated probes can be compared with completed reads.", "-e trace=openat,read,close")
+  ),
+  "interrupted-read": guide(
+    "A parent blocks while reading a pipe. A signal arrives before the writer sends the byte. Compare the effect of SA_RESTART on the same read.",
+    "Find the parent’s blocked read and SIGUSR1 delivery. The failing program reports that its read was interrupted.",
+    "variant",
+    step("Follow the writer that sends the signal", "-f shows the child’s kill() and write() alongside the parent’s trace.", "strace -f"),
+    step("Keep the signal setup and I/O in view", "rt_sigaction installs the handler and flags. sigreturn or rt_sigreturn marks the return from the handler.", "-e trace=read,write,kill,rt_sigaction,sigreturn,rt_sigreturn")
+  ),
+  "pending-signal": guide(
+    "The program blocks SIGUSR1 and sends it to itself. Use the wait’s argument to explain why a pending signal does not wake it.",
+    "Find the call that blocks SIGUSR1, the wait for SIGUSR2 and the later pending set with SIGUSR1.",
+    "variant",
+    step("Trace both waiting ABI names", "On this 32-bit guest the libc wrapper can use either the older or the time64 kernel syscall.", "rt_sigtimedwait,rt_sigtimedwait_time64"),
+    step("Observe the mask and pending set", "The selected calls show what was blocked, sent and still queued at the end.", "kill,rt_sigprocmask,rt_sigpending")
+  ),
+  "thread-wait": guide(
+    "A thread waits for a worker to publish a flag. The timed wait keeps the exercise bounded even if the wake never comes.",
+    "Find the timed FUTEX_WAIT_PRIVATE and its ETIMEDOUT result. Check whether a worker woke that same address.",
+    "variant",
+    step("Trace threads and measure each call", "-f includes the worker. -T reports elapsed call time, which can include time spent blocked.", "strace -f -T"),
+    step("Keep creation and futex operations", "Track the worker ID and futex address. Startup may try one clone API before using another.", "-e trace=clone,clone3,futex")
+  ),
+  "descriptor-limit": guide(
+    "A process opens the same device repeatedly. Follow the descriptor lifetime to distinguish a process limit from a device failure.",
+    "Find the first open of /dev/null that fails with EMFILE. Earlier opens return distinct descriptor numbers.",
+    "variant",
+    step("Decode the resource setup and descriptor activity", "The trace shows the process limit and the calls that accumulate or release descriptors.", "-e trace=open,openat,close,setrlimit,prlimit64"),
+    step("Separate kernel error from device identity", "Descriptor annotations identify /dev/null on successful opens and subsequent closes.", "strace -yy")
+  ),
+  "space-error": guide(
+    "A report can open a destination successfully and still fail to write. The guest uses /dev/full to reproduce the error without consuming disk space.",
+    "Find a successful open of /dev/full followed by a write that returns ENOSPC.",
+    "variant",
+    step("Identify the destination of a write", "-yy identifies /dev/full or the report path next to the descriptor.", "strace -yy"),
+    step("Follow the entire write attempt", "A trace that includes open, write and fsync identifies the stage that failed.", "-e trace=open,openat,write,fsync,close")
+  ),
+  "memory-limit": guide(
+    "A process sets a small virtual address-space limit and requests a buffer. Inspect the mapping size and its result.",
+    "Find the 32 MiB mapping that fails with ENOMEM after RLIMIT_AS is set.",
+    "variant",
+    step("Observe the process limit", "The libc call can use prlimit64 or setrlimit. Both names are useful in the trace filter.", "setrlimit,prlimit64"),
+    step("Recognise the x86 mapping syscall", "On 32-bit Linux the trace can show mmap2 for a libc mmap() call.", "mmap,mmap2,munmap")
+  ),
+  "terminal-control": guide(
+    "The program asks for terminal dimensions. Trace the descriptor to find out what kind of file received the request.",
+    "Find the ioctl on the descriptor for conf/settings and its ENOTTY result.",
+    "variant",
+    step("Show what the descriptor refers to", "-yy attaches path or device information to the descriptor in the ioctl line.", "strace -yy"),
+    step("Keep opens, controls and closes together", "Follow the descriptor and the named ioctl request to the kernel’s reported result.", "-e trace=open,openat,ioctl,close")
+  ),
+  "export-capstone": guide(
+    "An export process reports a generic failure after waiting for its worker. Build a diagnosis from the saved traces rather than assuming the parent caused the error.",
+    "Parent and worker traces are separate. Follow the child PID to a successful open and later failed write on the same descriptor.",
+    "variant",
+    step("Capture evidence per process", "The timestamps and PID suffixes connect the parent’s wait status to the child’s operations.", "strace -ff -ttt -o trace"),
+    step("Gather the file and process evidence", "Keep descriptor annotations and the key syscalls for determining whether the worker reached sync.", "-yy -e trace=open,openat,write,fsync,close,wait4")
+  ),
   'first-trace': guide(
     'A program says “startup failed”. Start with one question you can answer from the kernel’s evidence. Which path was it trying to open?',
     'Find the openat() line with conf/setting. The return value is -1 and ENOENT means the path was not found.',

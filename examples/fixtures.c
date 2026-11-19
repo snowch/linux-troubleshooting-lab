@@ -11,6 +11,7 @@
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
+#include <time.h>
 #include <unistd.h>
 
 static void check(int condition, const char *operation)
@@ -24,6 +25,14 @@ static void check(int condition, const char *operation)
 static int config(int fixed, const char *fault)
 {
     const char *file = fixed ? "conf/settings" : "conf/setting";
+    char absolute[512];
+    if (!strcmp(fault, "absolute-path")) {
+        const char *work = getenv("LAB_WORK");
+        check(work != NULL, "locate case directory");
+        int length = snprintf(absolute, sizeof absolute, "%s/%s", work, file);
+        check(length > 0 && (size_t)length < sizeof absolute, "configuration path length");
+        file = absolute;
+    }
     if (!strcmp(fault, "cwd")) {
         check(chdir(fixed ? "." : "work") == 0, "chdir");
         file = "conf/settings";
@@ -163,6 +172,27 @@ static int network(int fixed, int deadline)
     return status;
 }
 
+static void await_tracer(void)
+{
+    int fd = open("/proc/self/status", O_RDONLY | O_CLOEXEC);
+    check(fd >= 0, "open process status");
+    for (;;) {
+        char status[4096];
+        ssize_t bytes = pread(fd, status, sizeof status - 1, 0);
+        check(bytes > 0, "read process status");
+        status[bytes] = '\0';
+        char *tracer = strstr(status, "\nTracerPid:");
+        check(tracer != NULL, "find TracerPid");
+        if (strtol(tracer + sizeof "\nTracerPid:" - 1, NULL, 10) > 0)
+            break;
+        struct timespec delay = { .tv_nsec = 10 * 1000 * 1000 };
+        nanosleep(&delay, NULL);
+    }
+    close(fd);
+}
+
+int run_diagnostic(const char *name, int fixed);
+
 int main(int argc, char **argv)
 {
     alarm(8);
@@ -170,6 +200,10 @@ int main(int argc, char **argv)
         return 2;
     const char *variant = getenv("LAB_VARIANT");
     int fixed = variant && !strcmp(variant, "fixed");
+    if (!strcmp(argv[1], "attach")) {
+        await_tracer();
+        return config(fixed, "file");
+    }
     if (!strcmp(argv[1], "launch"))
         return launch(fixed);
     if (!strcmp(argv[1], "pipe"))
@@ -183,8 +217,7 @@ int main(int argc, char **argv)
             return 1;
         return launch(1);
     }
-    if (!strcmp(argv[1], "file") || !strcmp(argv[1], "cwd") || !strcmp(argv[1], "permission"))
+    if (!strcmp(argv[1], "file") || !strcmp(argv[1], "absolute-path") || !strcmp(argv[1], "cwd") || !strcmp(argv[1], "permission"))
         return config(fixed, argv[1]);
-    fputs("unknown fixture\n", stderr);
-    return 2;
+    return run_diagnostic(argv[1], fixed);
 }

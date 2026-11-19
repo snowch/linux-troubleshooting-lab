@@ -22,6 +22,73 @@ const connect = man('connect.2', 'On a nonblocking socket, EINPROGRESS leaves co
 const socketError = man('getsockopt.2', 'A successful getsockopt() return means the query worked. The SO_ERROR value it stores is the connection result. Zero means no pending error.', 'getsockopt(SO_ERROR)');
 
 export const references = {
+  'file-flow': [
+    trace('descriptor annotations', '-yy shows the path or other identity where available. Use the annotation to follow a descriptor across calls.'),
+    open, man('read.2', 'read() returns a byte count or -1 on failure. The repaired case reads the configuration bytes.'),
+    man('close.2', 'After close(), the descriptor number is available for reuse.')
+  ],
+  'filter-failures': [trace('syscall class and status', '%file selects pathname calls. status=failed hides successful ones. Remove it when you need to see what succeeded just before an error.'), open, errors],
+  'filter-path': [trace('path filters', '-P filters evidence to calls associated with that path. In this lesson the program passes an absolute pathname, so the spelling in the call matters.'), open],
+  'string-limits': [
+    trace('string display size', '-s sets the maximum string size printed in the trace. Inspect traces for sensitive data before sharing them.'),
+    man('write.2', 'Compare the requested byte count and return value. The string display limit does not change the bytes handed to the kernel.')
+  ],
+  'attach-process': [
+    trace('attach to an existing process', 'Pass -p PID instead of a command to attach to a process that is already running. Here the PID belongs to a process in the Linux guest.'),
+    man('ptrace.2', 'Linux checks whether the tracer has permission to observe the target. Attachment stops and resumes the target under tracer control.'),
+    man('proc_pid_status.5', 'TracerPid is zero when there is no tracer. The fixture waits until this field becomes nonzero before it opens the configuration.')
+  ],
+  'save-trace': [
+    trace('trace output file', '-o names the trace file. The tracee retains its existing output streams. The example prints the saved file before cleaning up the case.'),
+    open, man('write.2', 'The traced program can write to its standard output independently of where strace saves the trace.')
+  ],
+  'trace-per-process': [trace('per-process traces and timestamps', '-ff with -o writes a file for each traced PID. -ttt adds seconds since the epoch with fractional precision for comparing events.'), exec, wait],
+  'syscall-summary': [
+    trace('summary mode', '-c prints counts, errors and time per syscall. Its timing columns normally measure system CPU time. Use -w with -c to collect wall-clock syscall latency instead.'),
+    open, errors
+  ],
+  'interrupted-read': [
+    trace('interrupted and resumed calls', 'A split line can show a blocked syscall and its later result. ERESTARTSYS is an internal kernel restart result. Look at the subsequent trace and application output.'),
+    man('sigaction.2', 'Set SA_RESTART when installing a handler to request automatic restart of eligible calls.'),
+    man('signal.7', 'The effect of a caught signal depends on both the syscall and the SA_RESTART setting. Blocking reads from pipes are among the calls that can restart.'),
+    man('sigreturn.2', 'The signal-return syscall restores the state from before the handler. Its name can differ by ABI.')
+  ],
+  'pending-signal': [
+    trace('signal syscall names', 'Filter mask changes, sends and waits to see the path from sending a signal to consuming it. The 32-bit runtime can use two names for the timed wait.'),
+    man('sigprocmask.2', 'A blocked signal can remain pending. Changing the thread mask controls which signals can be delivered normally.'),
+    man('sigwaitinfo.2', 'sigtimedwait() consumes a pending signal from the supplied set. A timeout with no selected pending signal returns EAGAIN.', 'sigtimedwait(), sigwaitinfo()'),
+    man('sigpending.2', 'sigpending() reports the pending signals that are currently blocked.')
+  ],
+  'thread-wait': [
+    trace('thread tracing and call durations', '-f follows new threads, and -T prints elapsed time per syscall. Compare wait and wake addresses across thread IDs.'),
+    man('futex.2', 'FUTEX_WAIT checks the shared word against its expected value before sleeping. FUTEX_WAKE wakes waiters on that word. The PRIVATE variants tell Linux the word is shared by threads in the same process.'),
+    man('clone.2', 'clone() and clone3() create tasks with selectable sharing. CLONE_THREAD puts a worker in the same thread group.')
+  ],
+  'descriptor-limit': [
+    trace('descriptor lifetime', 'Trace the process limit and the calls that allocate and close descriptors. -yy adds the associated device or file where available.'),
+    man('getrlimit.2', 'RLIMIT_NOFILE is one greater than the highest descriptor number the process can open. Per-process exhaustion produces EMFILE.', 'RLIMIT_NOFILE'),
+    open, man('close.2', 'close() releases the descriptor slot. The next open may reuse its number.')
+  ],
+  'space-error': [
+    trace('write targets', '-yy displays the path or device associated with the destination descriptor. Keep open, write and sync in the same trace.'),
+    man('full.4', 'Writes to /dev/full fail with ENOSPC. This device lets the fixture reproduce the error without filling a filesystem.'),
+    man('fsync.2', 'fsync() returns success or an error separately from write(). A successful write alone does not guarantee durable storage.')
+  ],
+  'memory-limit': [
+    trace('selecting memory and resource syscalls', 'Include prlimit64 and mmap2 because a libc wrapper can use a kernel syscall with a different name on x86.'),
+    man('getrlimit.2', 'RLIMIT_AS limits virtual address space. A mapping request can return ENOMEM when it would exceed the process limit.', 'RLIMIT_AS'),
+    man('mmap.2', 'Check the requested byte count and mapping flags. mmap() returns MAP_FAILED on error, and a successful address can be passed to munmap().')
+  ],
+  'terminal-control': [
+    trace('decoding ioctl requests', 'strace decodes many ioctl request names. -yy adds the descriptor type so you can see why the requested operation applies or fails.'),
+    man('ioctl.2', 'The request code controls how the kernel interprets the descriptor and argument. Unsupported requests can produce ENOTTY.'),
+    man('TIOCGWINSZ.2const', 'TIOCGWINSZ queries a terminal’s window size. The guest console can return zero dimensions successfully.')
+  ],
+  'export-capstone': [
+    trace('correlating saved process traces', 'Follow the PID in the parent’s wait result to the file for that worker. Check the path, descriptor and error in its trace.'),
+    wait, man('write.2', 'A successful open does not guarantee a successful write. Find the returned byte count or the error for the worker’s write.'),
+    man('fsync.2', 'The repaired worker synchronises its report after writing successfully.')
+  ],
   'first-trace': [trace('system-call filters', 'Use -e trace=openat to show openat() calls with their file paths, flags, returned descriptors and error names.'), open, errors],
   'working-directory': [trace('filtering several call names', 'Use -e trace=chdir,openat to keep the directory change and subsequent file lookup in the same trace.'), chdir, open],
   permissions: [
