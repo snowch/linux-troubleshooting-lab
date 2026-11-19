@@ -6,4 +6,6 @@ The lab teaches a workflow from reading one syscall to filtering, capturing, sum
 
 `npm run check` validates the commands, walkthrough excerpts, reference notes and offline inventory. Both cases of all 25 lessons ran in the packaged Alpine x86 guest with networking disabled. Checks covered exit status and trace evidence. The edited commands for child tracing, pathname and outcome filters, string limits, and summary mode also ran in that guest.
 
+In Chromium, all 50 cases also ran with the browser offline after downloading the course. The pathname-filter edit and its evidence note survived a reload.
+
 The exercises use the guest’s actual strace executable. Attaching is limited to guest processes. Guest syscall timings include emulator effects, and the trace-file examples print their files before the per-run directory is removed.

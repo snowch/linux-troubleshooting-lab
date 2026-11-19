@@ -2,7 +2,7 @@ function man(page, note, title) {
   const [name, section] = page.split('.');
   return {
     title: title ?? `${name}(${section})`,
-    url: `https://man7.org/linux/man-pages/man${section}/${page}.html`,
+    url: `https://man7.org/linux/man-pages/man${section.replace(/const$/, '')}/${page}.html`,
     note
   };
 }
