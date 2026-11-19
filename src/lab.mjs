@@ -58,9 +58,8 @@ for (const item of course.lessons) {
 }
 picker.onchange = () => { location.hash = picker.value; };
 
-function showLesson() {
-  const index = course.lessons.findIndex(item => '#' + item.id === location.hash);
-  lesson = course.lessons[Math.max(0, index)];
+function showLesson(index) {
+  lesson = course.lessons[index];
   document.title = lesson.title + ' · ' + course.title;
   for (const [id, field] of Object.entries({
     'lesson-title':'title', section:'section', intro:'intro', question:'question',
@@ -72,7 +71,7 @@ function showLesson() {
   reference.textContent = lesson.reference[0];
   picker.value = lesson.id;
   $('next-lesson').replaceChildren();
-  for (const [other, label] of [[course.lessons[Math.max(0, index) - 1], 'Previous'], [course.lessons[Math.max(0, index) + 1], 'Next']]) {
+  for (const [other, label] of [[course.lessons[index - 1], 'Previous'], [course.lessons[index + 1], 'Next']]) {
     if (!other) continue;
     const link = document.createElement('a');
     link.href = '#' + other.id;
@@ -86,12 +85,29 @@ function showLesson() {
   variant.value = read(draftKey('variant')) === 'fixed' ? 'fixed' : 'broken';
   $('run').disabled = running;
 }
+function showRoute(moveFocus = false) {
+  const index = course.lessons.findIndex(item => '#' + item.id === location.hash);
+  const inLesson = index >= 0;
+  const pickerFocused = document.activeElement === picker;
+  $('overview').hidden = inLesson;
+  $('lesson-navigation').hidden = !inLesson;
+  $('workbench').hidden = !inLesson;
+  if (inLesson) void showLesson(index);
+  else document.title = course.title;
+  if (moveFocus) {
+    if (!inLesson || !pickerFocused)
+      $(inLesson ? 'lesson-title' : 'overview-title').focus({preventScroll: true});
+    $('main').scrollIntoView();
+  }
+}
+document.querySelector('.skip-link').onclick = event => {
+  event.preventDefault();
+  $('main').focus();
+};
 addEventListener('hashchange', () => {
-  if (location.hash === '#main') return;
-  void showLesson();
-  $('main').scrollIntoView();
+  if (location.hash !== '#main') showRoute(true);
 });
-void showLesson();
+showRoute();
 
 let repaint = 0;
 function paint() {

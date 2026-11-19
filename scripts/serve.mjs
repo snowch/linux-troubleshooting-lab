@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 const root = fileURLToPath(new URL('../dist/', import.meta.url)).replace(/\/$/, '');
 const types = { '.html':'text/html', '.css':'text/css', '.js':'application/javascript',
   '.mjs':'application/javascript', '.json':'application/json', '.wasm':'application/wasm',
-  '.woff2':'font/woff2', '.c':'text/plain', '.h':'text/plain' };
+  '.webp':'image/webp', '.ico':'image/x-icon', '.png':'image/png', '.woff2':'font/woff2', '.c':'text/plain', '.h':'text/plain' };
 createServer(async (request, response) => {
   try {
     const path = decodeURIComponent(new URL(request.url, 'http://localhost').pathname);

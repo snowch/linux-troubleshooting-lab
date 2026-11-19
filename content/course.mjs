@@ -1,6 +1,10 @@
 export const course = {
   "slug": "linux-troubleshooting-lab",
   "title": "Linux Troubleshooting Lab",
+  "overview": {
+    "description": "Use strace to explain file and permission errors, failed children, pipes that hang and loopback connection failures. Record the trace evidence and test your diagnosis against a repaired case.",
+    "prerequisites": "Be comfortable reading a shell command. Each case opens with a trace command you can edit and run."
+  },
   "instructions": "Run the command in Linux. Narrow the trace in the editor, record the evidence, then compare with the repaired case.",
   "lessons": [
     {

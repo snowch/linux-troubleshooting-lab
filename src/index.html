@@ -3,8 +3,10 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Diagnose Linux failures with real strace running in your browser.">
+  <meta name="description" content="{{description}}">
   <title>{{title}}</title>
+  <link rel="icon" href="./favicon.ico" sizes="any">
+  <link rel="apple-touch-icon" href="./apple-touch-icon.png">
   <link rel="stylesheet" href="./style.css">
   <script type="module" src="./lab.mjs"></script>
 </head>
@@ -12,7 +14,7 @@
   <a class="skip-link" href="#main">Skip to lesson</a>
   <header>
     <div class="header-inner">
-      <a href="./" class="brand">{{title}}</a>
+      <a href="#overview" class="brand">{{title}}</a>
       <div class="actions">
         <button type="button" id="theme">Dark theme</button>
         <button type="button" id="offline">Download for offline use</button>
@@ -20,14 +22,38 @@
     </div>
   </header>
   <p class="offline-status" id="offline-status" role="status" hidden></p>
-  <main id="main" class="layout">
-    <nav class="lesson-picker" aria-label="Lesson navigation">
+  <main id="main" class="layout" tabindex="-1">
+    <section id="overview" aria-labelledby="overview-title">
+      <div class="course-hero">
+        <div>
+          <h1 id="overview-title" tabindex="-1">{{title}}</h1>
+          <p class="lede">{{description}}</p>
+          <a class="primary start-lesson" href="#{{firstLesson}}">Start the first lesson</a>
+        </div>
+        <img class="course-cover" src="./cover.webp" alt="" width="720" height="460" fetchpriority="high">
+      </div>
+      <div class="course-setup">
+        <section aria-labelledby="prerequisites">
+          <h2 id="prerequisites">Before you start</h2>
+          <p>{{prerequisites}}</p>
+        </section>
+        <section aria-labelledby="offline-help">
+          <h2 id="offline-help">Learning offline</h2>
+          <p>The lab runs Linux in WebAssembly. Choose <strong>Download for offline use</strong> while connected, then reopen this course in the same browser.</p>
+        </section>
+      </div>
+      <nav aria-labelledby="outline-title">
+        <h2 id="outline-title">Course outline</h2>
+        <div class="course-outline">{{outline}}</div>
+      </nav>
+    </section>
+    <nav id="lesson-navigation" class="lesson-picker" aria-label="Lesson navigation" hidden>
       <label for="lesson-picker">Lesson</label>
       <select id="lesson-picker"></select>
     </nav>
-    <article aria-labelledby="lesson-title">
+    <article id="workbench" aria-labelledby="lesson-title" hidden>
       <p class="section-label" id="section"></p>
-      <h1 id="lesson-title">{{title}}</h1>
+      <h1 id="lesson-title" tabindex="-1">{{title}}</h1>
       <p class="lede" id="intro"></p>
       <p id="question" class="question"></p>
       <section aria-labelledby="workbench-heading">

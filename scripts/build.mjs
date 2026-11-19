@@ -8,7 +8,22 @@ function at(path) { return new URL(path, import.meta.url); }
 await rm(dist, { recursive: true, force: true });
 await mkdir(dist, { recursive: true });
 const template = await readFile(at('../src/index.html'), 'utf8');
-await writeFile(new URL('index.html', dist), template.replaceAll('{{title}}', course.title));
+const escape = value => String(value).replace(/[&<>"']/g, character => ({
+  '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+})[character]);
+const sections = Map.groupBy(course.lessons, lesson => lesson.section);
+const outline = [...sections].map(([section, lessons]) =>
+  `<section><h3>${escape(section)}</h3><ul>${lessons.map(lesson =>
+    `<li><a href="#${escape(lesson.id)}">${escape(lesson.title)}</a></li>`
+  ).join('')}</ul></section>`
+).join('\n');
+const fields = { ...course.overview, title: course.title, firstLesson: course.lessons[0].id };
+const html = template.replace(/{{([a-zA-Z]+)}}/g, (_, key) =>
+  key === 'outline' ? outline : escape(fields[key])
+);
+await writeFile(new URL('index.html', dist), html);
+for (const name of ['cover.webp', 'favicon.ico', 'apple-touch-icon.png'])
+  await cp(at('../assets/' + name), new URL(name, dist));
 await cp(at('../src/style.css'), new URL('style.css', dist));
 await cp(at('../src/lab.mjs'), new URL('lab.mjs', dist));
 await cp(at('../content/course.mjs'), new URL('course.mjs', dist));
