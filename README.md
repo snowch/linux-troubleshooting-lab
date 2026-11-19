@@ -1,4 +1,4 @@
-# Linux Troubleshooting Lab
+# Linux Troubleshooting with strace Lab
 
 [Open the lab](https://snowch.github.io/linux-troubleshooting-lab/).
 
