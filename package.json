@@ -1,0 +1,14 @@
+{
+  "name": "linux-troubleshooting-lab",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Diagnose Linux failures with real strace.",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "dev": "npm run build && node scripts/serve.mjs",
+    "build": "node scripts/build.mjs",
+    "test": "node scripts/check.mjs",
+    "check": "npm run build && npm test"
+  }
+}
