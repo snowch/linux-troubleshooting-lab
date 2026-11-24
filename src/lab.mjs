@@ -286,7 +286,7 @@ function showRun() {
   const shellReady = guestReady && !busy;
   command.disabled = !shellReady;
   $('shell').querySelector('button').disabled = !shellReady;
-  $('shell-stop').disabled = !shellReady;
+  $('shell-stop').disabled = !guestReady || Boolean(activeRun || resetting || starting || maintenance);
   $('restart').disabled = !guestReady || resetting || Boolean(activeRun && !activeRun.submitted);
   showOutput();
 }
@@ -518,7 +518,14 @@ $('stop').onclick = () => {
   runMessage(activeRun, 'Interrupt sent to Linux');
   vm.serial0_send('\x03');
 };
-$('shell-stop').onclick = () => vm?.serial0_send('\x03');
+$('shell-stop').onclick = () => {
+  if(!vm)return;
+  if(manualShellBusy){
+    // Ctrl-C can flush a marker queued behind the foreground command. Send a new one after it.
+    manualShellMarker='__MANUAL_'+crypto.randomUUID().replaceAll('-','')+'__';
+    vm.serial0_send(`\x03\nprintf '\\n${manualShellMarker}\\n'\n`);
+  }else vm.serial0_send('\x03');
+};
 $('restart').onclick = async () => {
   if (!guestReady || resetting || maintenance || !confirm('Reset Linux? This removes temporary and saved Linux guest files. Your lesson source edits and results are kept.')) return;
   try { await clearGuestFiles(course.slug); } catch (error) { status.textContent='Linux was kept: '+error.message; return; }
@@ -558,7 +565,7 @@ function loadStoredRun(name){if(latestRuns.has(name))return;try{const saved=JSON
 const api = {
  currentLesson: () => lesson,
  isBusy: () => Boolean(activeRun || resetting || starting || maintenance || manualShellBusy || manualShellTouched),
- state: () => ({ready:guestReady,busy:Boolean(activeRun || resetting || starting || maintenance || manualShellBusy),idleEligible:!manualShellTouched,detail:startupMessage||activeRun?.message||'',phase:maintenance?'Saving files':starting||activeRun?.controller?'Starting':activeRun?'Running':guestReady?'Ready':'Stopped'}),
+ state: () => ({ready:guestReady,busy:Boolean(activeRun || resetting || starting || maintenance || manualShellBusy),idleEligible:!manualShellTouched,detail:manualShellBusy?'A Linux shell command is running. Use Interrupt shell command in the shell tools to stop it before freeing memory.':startupMessage||activeRun?.message||'',phase:maintenance?'Saving files':starting||activeRun?.controller?'Starting':manualShellBusy?'Shell running':activeRun?'Running':guestReady?'Ready':'Stopped'}),
  async start(){
   if(guestReady)return;
   if(starting||activeRun||maintenance)throw Error('Wait for the current runner action to finish.');

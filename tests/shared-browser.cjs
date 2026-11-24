@@ -162,8 +162,17 @@ const { createReadStream } = require("node:fs");
     await expect(other.locator("#runtime-recovery-dialog")).toBeHidden();
     await other.close();
     await p.locator("#guest-tools>summary").click();
-    await p.locator("#command").fill("printf kept > /root/offline-proof.txt");
+    await p.locator('#command').fill('sleep 60');
+    await p.locator('#shell button').click();
+    await expect(p.locator('#runner-summary')).toHaveText('Shell running');
+    await expect(p.locator('#shell-stop')).toBeEnabled();
+    await p.locator('#shell-stop').click();
+    await expect(p.locator('#command')).toBeEnabled({timeout:15000});
+    await expect(p.locator('#runner-summary')).toHaveText('Ready');
+
+    await p.locator("#command").fill("printf kept > /root/offline-proof.txt; sleep 1");
     await p.locator("#shell button").click();
+    await expect(p.locator("#runner-summary")).toHaveText("Shell running");
     await expect(p.locator("#command")).toBeEnabled({ timeout: 30000 });
     await p.locator("#code-runner-open").click();
     await p.locator("[data-free]").click();
@@ -214,7 +223,7 @@ const { createReadStream } = require("node:fs");
     await expect(p.locator("#reference-list li p").first()).not.toBeEmpty();
     assert.deepEqual(errors, []);
     console.log(
-      "PASS: 3 widths × 2 themes; native modal cancellation; explicit start acknowledgement; actual cold/offline starter+experiment; exclusive guest ownership; /root files saved/restored; preserved code, genuine output and completion; unvisited lesson sources/references.",
+      "PASS: 3 widths × 2 themes; native modal cancellation; explicit start acknowledgement; actual cold/offline starter+experiment; exclusive guest ownership; manual shell status/interrupt recovery; /root files saved/restored; preserved code, genuine output and completion; unvisited lesson sources/references.",
     );
   } finally {
     await context?.close();

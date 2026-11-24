@@ -47,3 +47,5 @@ The separate real-guest journey saves the complete course before any guest start
 Passing these functional checks does not establish learning effectiveness or physical Android performance. Retain failed runs honestly, fix the cause, and rerun the affected journey before merging. Never relax an assertion just to make a transfer or a download look successful.
 
 Recovery snapshot identity excludes the operational download and gpu-release query parameters, while keeping lesson hashes, search and step parameters. Recovery may remove those operational parameters before reloading; the same per-window snapshot must still restore. The small-release browser fixture verifies this path.
+
+A manual foreground command is labelled Shell running, with Run/free-memory actions blocked and Interrupt shell command kept usable. Ctrl-C can flush queued terminal input, so interruption sends a fresh completion marker rather than waiting forever for the original one. The real guest browser journey interrupts a long sleep and verifies that the controls recover before testing saved files.
