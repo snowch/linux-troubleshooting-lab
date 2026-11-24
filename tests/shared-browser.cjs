@@ -57,6 +57,7 @@ const { createReadStream } = require("node:fs");
     let p = await open();
     await p.goto(base + "#" + example.id);
     await expect(p.locator("#source")).toBeEnabled();
+    assert.deepEqual(await p.locator('header .actions > button').evaluateAll(nodes=>nodes.map(n=>n.id)),['code-runner-open','app-status-open','theme']);
     let guestRequests = 0;
     p.on("request", (r) => {
       if (/runtime\/(?:parts|libv86|v86|vmlinuz)/.test(r.url()))
