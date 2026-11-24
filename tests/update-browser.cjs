@@ -209,6 +209,10 @@ const { chromium, expect } = require("playwright/test"),
     assert.equal(await p.locator("#notes").evaluate((n) => n.open), true);
     await expect(p.locator("#output")).toHaveText("recorded output");
     await expect(q.locator("#output")).toHaveText("recorded output");
+    // Recovery removes operational URL parameters before reloading; keep that window's snapshot reachable.
+    await p.locator('#source').fill('query recovery edit');
+    await p.evaluate(async()=>{const url=new URL(location.href);url.searchParams.set('download','1');url.searchParams.set('gpu-release',document.querySelector('meta[name="gpu-release"]').content);history.replaceState(null,'',url);const script=document.querySelector('script[src*="/fixture.mjs"]').src;await(await import(new URL('./experiment-state.mjs',script))).saveReadingState();url.searchParams.delete('download');url.searchParams.delete('gpu-release');history.replaceState(null,'',url);});
+    await p.reload();await expect(p.locator('#source')).toHaveValue('query recovery edit');
     await context.setOffline(true);
     await p.reload();
     await expect(p.locator("body")).toHaveAttribute("data-version", "b");

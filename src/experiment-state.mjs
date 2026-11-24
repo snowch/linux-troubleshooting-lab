@@ -1,6 +1,7 @@
 // Copyright © 2026 Christopher Snow. Verified per-window snapshots veto unsafe restarts.
 const slug = location.pathname.split("/").filter(Boolean)[0] || "linux-lab";
 const marker = slug + ":reading-snapshot";
+const readingURL=()=>{const url=new URL(location.href);url.searchParams.delete('gpu-release');url.searchParams.delete('download');return url.pathname+url.search+url.hash;};
 let composing = false,
   saving = false,
   restoring = false,
@@ -52,7 +53,7 @@ export async function saveReadingState() {
     token = crypto.randomUUID();
     const record = {
       token,
-      url: location.pathname + location.search + location.hash,
+      url: readingURL(),
       work,
       scroll: [scrollX, scrollY],
       details: [...document.querySelectorAll("main details[id]")].map((n) => [
@@ -110,7 +111,7 @@ async function restore() {
     } finally {
       db.close();
     }
-    if (record?.url === location.pathname + location.search + location.hash) {
+    if (record?.url === readingURL()) {
       await window.labWorkbench.restoreReading(record.work);
       for (const [id, open] of record.details || []) {
         const n = document.getElementById(id);
