@@ -1,4 +1,4 @@
-let manualShellMarker = '';
+let manualShellMarker = '', manualShellInterrupting = false;
 import {mountCourseShell} from './course-shell.mjs';
 import {saveGuestFiles,restoreGuestFiles,clearGuestFiles,rawSavedGuestFiles,captureGuestFiles,guestCommand,acquireGuestOwnership,releaseGuestOwnership} from './guest-files.mjs';
 import { course } from './course.mjs';
@@ -286,7 +286,7 @@ function showRun() {
   const shellReady = guestReady && !busy;
   command.disabled = !shellReady;
   $('shell').querySelector('button').disabled = !shellReady;
-  $('shell-stop').disabled = !shellReady;
+  $('shell-stop').disabled = !guestReady || Boolean(activeRun || resetting || starting || maintenance);
   $('restart').disabled = !guestReady || resetting || Boolean(activeRun && !activeRun.submitted);
   showOutput();
 }
@@ -310,7 +310,7 @@ function receive(byte) {
   if (byte === 10) {
     const completed = line;
     line = '';
-    if(!run&&manualShellMarker&&completed===manualShellMarker){manualShellMarker='';manualShellBusy=false;showRun();return;}
+    if(!run&&manualShellMarker&&completed===manualShellMarker){manualShellMarker='';manualShellInterrupting=false;manualShellBusy=false;showRun();return;}
     if (run && completed === run.startMarker) {
       run.capture = true;
     } else if (run && completed === run.commandMarker) {
@@ -332,6 +332,11 @@ function receive(byte) {
     serialByte[0] = byte;
     line = (line + decoder.decode(serialByte, { stream: true })).slice(-5000);
     if (run?.interrupt && line === shellPrompt) complete(run, 'Run interrupted');
+  }
+  if(manualShellInterrupting&&line.endsWith(shellPrompt)){
+    manualShellInterrupting=false;
+    const marker=manualShellMarker;
+    queueMicrotask(()=>{if(vm&&manualShellBusy&&manualShellMarker===marker)vm.serial0_send(`printf '\\n${marker}\\n'\n`);});
   }
   paint();
 }
@@ -518,7 +523,15 @@ $('stop').onclick = () => {
   runMessage(activeRun, 'Interrupt sent to Linux');
   vm.serial0_send('\x03');
 };
-$('shell-stop').onclick = () => vm?.serial0_send('\x03');
+$('shell-stop').onclick = () => {
+  if(!vm)return;
+  if(manualShellBusy){
+    // Wait for the actual prompt: the interrupt may flush input after Ctrl-C is sent.
+    manualShellMarker='__MANUAL_'+crypto.randomUUID().replaceAll('-','')+'__';
+    manualShellInterrupting=true;
+    vm.serial0_send('\x03\n');
+  }else vm.serial0_send('\x03');
+};
 $('restart').onclick = async () => {
   if (!guestReady || resetting || maintenance || !confirm('Reset Linux? This removes temporary and saved Linux guest files. Your lesson source edits and results are kept.')) return;
   try { await clearGuestFiles(course.slug); } catch (error) { status.textContent='Linux was kept: '+error.message; return; }
@@ -558,7 +571,7 @@ function loadStoredRun(name){if(latestRuns.has(name))return;try{const saved=JSON
 const api = {
  currentLesson: () => lesson,
  isBusy: () => Boolean(activeRun || resetting || starting || maintenance || manualShellBusy || manualShellTouched),
- state: () => ({ready:guestReady,busy:Boolean(activeRun || resetting || starting || maintenance || manualShellBusy),idleEligible:!manualShellTouched,detail:startupMessage||activeRun?.message||'',phase:maintenance?'Saving files':starting||activeRun?.controller?'Starting':activeRun?'Running':guestReady?'Ready':'Stopped'}),
+ state: () => ({ready:guestReady,busy:Boolean(activeRun || resetting || starting || maintenance || manualShellBusy),idleEligible:!manualShellTouched,detail:manualShellBusy?'A Linux shell command is running. Use Interrupt shell command in the shell tools to stop it before freeing memory.':startupMessage||activeRun?.message||'',phase:maintenance?'Saving files':starting||activeRun?.controller?'Starting':manualShellBusy?'Shell running':activeRun?'Running':guestReady?'Ready':'Stopped'}),
  async start(){
   if(guestReady)return;
   if(starting||activeRun||maintenance)throw Error('Wait for the current runner action to finish.');
