@@ -1,5 +1,7 @@
-import { createHash } from 'node:crypto';
-import { cp, mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
+import {execFileSync} from 'node:child_process';
+import {fileURLToPath} from 'node:url';
+import {buildOffline} from './offline.mjs';
+import { cp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { course } from '../content/course.mjs';
 import { walkthroughs } from '../content/walkthroughs.mjs';
 
@@ -45,18 +47,13 @@ await cp(at('../content/references.mjs'), new URL('references.mjs', dist));
 await cp(at('../runtime/files/'), new URL('runtime/', dist), { recursive: true });
 await cp(at('../examples/'), new URL('examples/', dist), { recursive: true });
 await cp(at('../assets/fonts/'), new URL('fonts/', dist), { recursive: true });
-const entries = (await readdir(dist, { recursive: true, withFileTypes: true }))
-  .filter(entry => entry.isFile())
-  .map(entry => entry.parentPath.slice(dist.pathname.length) + '/' + entry.name)
-  .map(path => path.replace(/^\//, '')).sort();
-const hash = createHash('sha256');
-const worker = await readFile(at('../src/offline.template.js'), 'utf8');
-hash.update(worker);
-for (const path of entries) {
-  hash.update(path + '\0');
-  hash.update(await readFile(new URL(path, dist)));
-}
-const version = hash.digest('hex').slice(0, 20);
-await writeFile(new URL('offline.js', dist), worker
-  .replace('__VERSION__', version).replace('__FILES__', JSON.stringify(entries)));
-console.log(`Built ${course.title} (${entries.length} offline assets)`);
+// Shared controls are source assets, included in the verified immutable release.
+for (const name of ['offline.mjs','release-contract.mjs','release-metadata.mjs','media-range.mjs','runtime-recovery.mjs','runtime-recovery.css','app-status.css','experiment-state.mjs','course-shell.mjs','course-shell.css','guest-files.mjs','material-symbols.mjs','material-symbols.css'])
+  await cp(at('../src/' + name), new URL(name, dist));
+await cp(at('../src/icons/'), new URL('icons/', dist), { recursive: true });
+await cp(at('../runtime/README.md'), new URL('NOTICE.md', dist));
+await cp(at('../runtime/packages.tsv'), new URL('runtime/packages.tsv', dist));
+const dirty=execFileSync('git',['status','--porcelain'],{encoding:'utf8'}).trim();
+const commit=process.env.COURSE_COMMIT || (dirty?null:execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim());
+const release=await buildOffline(fileURLToPath(dist), {commit,date:commit?execFileSync('git',['show','-s','--format=%cs',commit],{encoding:'utf8'}).trim():null});
+console.log(`Built ${course.title}: ${release.files.length} verified files, ${(release.bytes/1e6).toFixed(1)} MB`);

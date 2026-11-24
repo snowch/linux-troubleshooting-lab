@@ -13,7 +13,7 @@ Each lesson has an editable trace command, a failing and repaired fixture, space
 
 The lab traces processes inside the guest. Use a native Linux session to attach to processes on your own machine or measure production timings. The saved-trace exercises display their trace files before the guest removes the run directory.
 
-Choose **Download for offline use** while connected and wait for **Available offline**. Allow roughly 145 MB of browser storage, then reopen the same URL in the same browser profile. The trace tool, fixtures, Linux image and lessons are included.
+Choose **App status → Save offline copy** while connected and wait for **Downloaded and ready to use offline**. Allow roughly 145 MB of browser storage, then reopen the same URL in the same browser profile. The trace tool, fixtures, Linux image and lessons are included.
 
 ## Develop
 

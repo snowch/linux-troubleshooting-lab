@@ -1,13 +1,18 @@
+import {createHash} from 'node:crypto';
+import {validateRelease} from '../src/release-contract.mjs';
 import assert from 'node:assert/strict';
 import { readFile, stat } from 'node:fs/promises';
 import { course } from '../content/course.mjs';
 import { references } from '../dist/references.mjs';
 
 const dist = new URL('../dist/', import.meta.url);
-const content = await readFile(new URL('offline.js', dist), 'utf8');
-const match = /^const FILES = (.+);$/m.exec(content);
-assert(match, 'generated offline asset list');
-const offlinePaths = new Set(JSON.parse(match[1]));
+const release = validateRelease(JSON.parse(await readFile(new URL('release.json', dist), 'utf8')));
+const offlinePaths = new Set(release.files.map(file => file.path));
+for (const file of release.files) {
+  const body = await readFile(new URL(file.path, dist));
+  assert.equal(body.byteLength, file.bytes, file.path + ': recorded byte count');
+  assert.equal(createHash('sha256').update(body).digest('hex'), file.sha256, file.path + ': recorded file hash');
+}
 const guest = JSON.parse(await readFile(new URL('runtime/parts.json', dist), 'utf8'));
 let bytes = 0;
 for (const name of guest.parts) {

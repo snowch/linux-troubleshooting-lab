@@ -17,7 +17,17 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+      - run: npm ci
       - run: npm run check
+      - name: Install browser
+        run: npx playwright install --with-deps chromium
+      - name: Verify real offline guest, saved files and controls
+        run: CHROMIUM=$(node -e "console.log(require('playwright').chromium.executablePath())") npm run test:browser
+      - name: Retain assets for older open lessons
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        env:
+          PUBLISHED_COURSE_URL: https://snowch.github.io/linux-troubleshooting-lab/
+        run: node scripts/retain-for-publish.mjs
       - uses: actions/upload-pages-artifact@v3
         if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
         with:
