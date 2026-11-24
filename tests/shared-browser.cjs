@@ -162,9 +162,10 @@ const { createReadStream } = require("node:fs");
     await expect(other.locator("#runtime-recovery-dialog")).toBeHidden();
     await other.close();
     await p.locator("#guest-tools>summary").click();
-    await p.locator('#command').fill('sleep 60');
+    await p.locator('#command').fill("printf '%s%s\\n' __MANUAL_ STARTED__; sleep 60");
     await p.locator('#shell button').click();
     await expect(p.locator('#runner-summary')).toHaveText('Shell running');
+    await expect(p.locator('#shell-output')).toContainText('\n__MANUAL_STARTED__\n',{timeout:15000});
     await expect(p.locator('#shell-stop')).toBeEnabled();
     await p.locator('#shell-stop').click();
     await expect(p.locator('#command')).toBeEnabled({timeout:15000});
@@ -225,6 +226,9 @@ const { createReadStream } = require("node:fs");
     console.log(
       "PASS: 3 widths × 2 themes; native modal cancellation; explicit start acknowledgement; actual cold/offline starter+experiment; exclusive guest ownership; manual shell status/interrupt recovery; /root files saved/restored; preserved code, genuine output and completion; unvisited lesson sources/references.",
     );
+  } catch(error){
+    for(const page of context?.pages()||[])if(page.url().startsWith(base))console.error('Guest state at failure:',await page.locator('#shell-output').textContent().catch(()=>''),await page.locator('#runner-summary').textContent().catch(()=>''));
+    throw error;
   } finally {
     await context?.close();
     if (online) {

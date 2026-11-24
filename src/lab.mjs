@@ -1,4 +1,4 @@
-let manualShellMarker = '';
+let manualShellMarker = '', manualShellInterrupting = false;
 import {mountCourseShell} from './course-shell.mjs';
 import {saveGuestFiles,restoreGuestFiles,clearGuestFiles,rawSavedGuestFiles,captureGuestFiles,guestCommand,acquireGuestOwnership,releaseGuestOwnership} from './guest-files.mjs';
 import { course } from './course.mjs';
@@ -310,7 +310,7 @@ function receive(byte) {
   if (byte === 10) {
     const completed = line;
     line = '';
-    if(!run&&manualShellMarker&&completed===manualShellMarker){manualShellMarker='';manualShellBusy=false;showRun();return;}
+    if(!run&&manualShellMarker&&completed===manualShellMarker){manualShellMarker='';manualShellInterrupting=false;manualShellBusy=false;showRun();return;}
     if (run && completed === run.startMarker) {
       run.capture = true;
     } else if (run && completed === run.commandMarker) {
@@ -332,6 +332,11 @@ function receive(byte) {
     serialByte[0] = byte;
     line = (line + decoder.decode(serialByte, { stream: true })).slice(-5000);
     if (run?.interrupt && line === shellPrompt) complete(run, 'Run interrupted');
+  }
+  if(manualShellInterrupting&&line.endsWith(shellPrompt)){
+    manualShellInterrupting=false;
+    const marker=manualShellMarker;
+    queueMicrotask(()=>{if(vm&&manualShellBusy&&manualShellMarker===marker)vm.serial0_send(`printf '\\n${marker}\\n'\n`);});
   }
   paint();
 }
@@ -521,9 +526,10 @@ $('stop').onclick = () => {
 $('shell-stop').onclick = () => {
   if(!vm)return;
   if(manualShellBusy){
-    // Ctrl-C can flush a marker queued behind the foreground command. Send a new one after it.
+    // Wait for the actual prompt: the interrupt may flush input after Ctrl-C is sent.
     manualShellMarker='__MANUAL_'+crypto.randomUUID().replaceAll('-','')+'__';
-    vm.serial0_send(`\x03\nprintf '\\n${manualShellMarker}\\n'\n`);
+    manualShellInterrupting=true;
+    vm.serial0_send('\x03\n');
   }else vm.serial0_send('\x03');
 };
 $('restart').onclick = async () => {
