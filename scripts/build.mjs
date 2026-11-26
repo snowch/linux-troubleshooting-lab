@@ -48,7 +48,7 @@ await cp(at('../runtime/files/'), new URL('runtime/', dist), { recursive: true }
 await cp(at('../examples/'), new URL('examples/', dist), { recursive: true });
 await cp(at('../assets/fonts/'), new URL('fonts/', dist), { recursive: true });
 // Shared controls are source assets, included in the verified immutable release.
-for (const name of ['offline.mjs','release-contract.mjs','release-metadata.mjs','media-range.mjs','runtime-recovery.mjs','runtime-recovery.css','app-status.css','experiment-state.mjs','course-shell.mjs','course-shell.css','guest-files.mjs','material-symbols.mjs','material-symbols.css'])
+for (const name of ['offline.mjs','header-controls.mjs','header-controls.LICENSE.txt','release-contract.mjs','release-metadata.mjs','media-range.mjs','runtime-recovery.mjs','runtime-recovery.css','app-status.css','experiment-state.mjs','course-shell.mjs','course-shell.css','guest-files.mjs','material-symbols.mjs','material-symbols.css'])
   await cp(at('../src/' + name), new URL(name, dist));
 await cp(at('../src/icons/'), new URL('icons/', dist), { recursive: true });
 await cp(at('../runtime/README.md'), new URL('NOTICE.md', dist));
